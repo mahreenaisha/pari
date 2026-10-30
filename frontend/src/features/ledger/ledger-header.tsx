@@ -14,8 +14,8 @@ import type { LedgerFilter } from './use-ledger';
 
 const FILTERS: readonly SegmentOption<LedgerFilter>[] = [
   { value: 'all', label: 'All' },
-  { value: 'in', label: 'Money in' },
-  { value: 'out', label: 'Money out' },
+  { value: 'open', label: 'Open' },
+  { value: 'closed', label: 'Closed' },
 ];
 
 type LedgerHeaderProps = {
@@ -39,15 +39,25 @@ export function LedgerHeader({ summary, filter, onFilterChange }: LedgerHeaderPr
       <ScreenHeader overline={formatMonth()} title="Ledger" />
 
       <View style={styles.balance}>
-        <AppText variant="caption">Net balance</AppText>
+        <AppText variant="caption">To collect</AppText>
         <AppText variant="display" style={styles.figure}>
-          {summary ? formatMoney(summary.balance) : '—'}
+          {summary ? formatMoney(summary.toCollect) : '—'}
         </AppText>
       </View>
 
       <View style={styles.stats}>
-        <Stat icon="moneyIn" label="Money in" value={summary?.totalIn} color={colors.moneyIn} />
-        <Stat icon="moneyOut" label="Money out" value={summary?.totalOut} color={colors.moneyOut} />
+        <Stat
+          icon="moneyIn"
+          label="Collected today"
+          value={summary ? formatMoney(summary.collectedToday) : undefined}
+          color={colors.text}
+        />
+        <Stat
+          icon="open"
+          label="Open entries"
+          value={summary ? String(summary.openCount) : undefined}
+          color={colors.due}
+        />
       </View>
 
       <SegmentedControl options={FILTERS} value={filter} onChange={onFilterChange} />
@@ -58,7 +68,7 @@ export function LedgerHeader({ summary, filter, onFilterChange }: LedgerHeaderPr
 type StatProps = {
   icon: IconName;
   label: string;
-  value?: number;
+  value?: string;
   color: string;
 };
 
@@ -72,7 +82,7 @@ function Stat({ icon, label, value, color }: StatProps) {
         <AppText variant="caption">{label}</AppText>
       </View>
       <AppText variant="bodyStrong" color={color} style={styles.statValue}>
-        {value === undefined ? '—' : formatMoney(value)}
+        {value ?? '—'}
       </AppText>
     </View>
   );
@@ -99,6 +109,7 @@ const styles = StyleSheet.create({
   },
   stat: {
     flex: 1,
+    justifyContent: 'space-between',
     gap: spacing.xs,
     padding: spacing.md,
     borderRadius: radii.lg,

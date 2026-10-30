@@ -12,9 +12,9 @@ import { LedgerRow } from './ledger-row';
 import { groupByDay, summarize, useLedgerEntries, type LedgerFilter } from './use-ledger';
 
 const EMPTY_COPY: Record<LedgerFilter, string> = {
-  all: 'Nothing here yet. Entries you add by voice or QR will show up here.',
-  in: 'No money in yet.',
-  out: 'No money out yet.',
+  all: 'No entries yet. Speak one on the Listen tab and it shows up here once you confirm it.',
+  open: 'Nothing to collect. Every entry is closed.',
+  closed: 'No closed entries yet.',
 };
 
 export function LedgerScreen() {

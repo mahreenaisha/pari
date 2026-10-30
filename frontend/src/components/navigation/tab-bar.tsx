@@ -70,7 +70,10 @@ export function TabBar({ state, descriptors, emitter, navigateToTab }: BottomTab
               onPress={onPress}
               onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
               style={styles.item}>
-              {options.tabBarIcon?.({ focused, color, size: ICON_SIZE })}
+              <View>
+                {options.tabBarIcon?.({ focused, color, size: ICON_SIZE })}
+                {options.tabBarBadge === undefined ? null : <View style={styles.badge} />}
+              </View>
               <AppText variant="caption" color={color} style={styles.label}>
                 {label}
               </AppText>
@@ -131,5 +134,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansMedium,
     fontSize: 11,
     lineHeight: 14,
+  },
+  badge: {
+    position: 'absolute',
+    top: -1,
+    right: -4,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: colors.accent,
+    borderWidth: 1.5,
+    borderColor: '#0D0E13',
   },
 });

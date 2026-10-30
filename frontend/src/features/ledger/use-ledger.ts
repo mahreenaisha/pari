@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { formatDayLabel } from '@/lib/format';
 import { fetchLedgerEntries } from '@/services/ledger-service';
-import type { LedgerEntry, LedgerSummary, MoneyDirection } from '@/types/ledger';
+import type { EntryStatus, LedgerEntry, LedgerSummary } from '@/types/ledger';
 
 export const ledgerKeys = {
   all: ['ledger'] as const,
@@ -16,32 +16,52 @@ export function useLedgerEntries() {
   });
 }
 
-export type LedgerFilter = 'all' | MoneyDirection;
+export type LedgerFilter = 'all' | Exclude<EntryStatus, 'unconfirmed'>;
 
 export type LedgerSection = {
   title: string;
   data: LedgerEntry[];
 };
 
-export function summarize(entries: LedgerEntry[]): LedgerSummary {
-  let totalIn = 0;
-  let totalOut = 0;
-  for (const entry of entries) {
-    if (entry.direction === 'in') totalIn += entry.amount;
-    else totalOut += entry.amount;
-  }
-  return { balance: totalIn - totalOut, totalIn, totalOut };
+function isToday(iso: string, now = new Date()) {
+  return new Date(iso).toDateString() === now.toDateString();
 }
 
-/** Newest first, grouped under "Today", "Yesterday", or the date. */
+export function summarize(entries: LedgerEntry[]): LedgerSummary {
+  let toCollect = 0;
+  let collectedToday = 0;
+  let openCount = 0;
+  for (const entry of entries) {
+    if (entry.status === 'open') {
+      toCollect += entry.pending;
+      openCount += 1;
+    }
+    for (const payment of entry.payments) {
+      if (isToday(payment.at)) collectedToday += payment.amount;
+    }
+  }
+  return { toCollect, collectedToday, openCount };
+}
+
+/** When the entry last changed: created, link sent, or paid. */
+export function lastActivity(entry: LedgerEntry) {
+  let latest = entry.createdAt;
+  for (const at of [entry.link?.sentAt, ...entry.payments.map((payment) => payment.at)]) {
+    if (at && Date.parse(at) > Date.parse(latest)) latest = at;
+  }
+  return latest;
+}
+
+/** Most recently active first, grouped under "Today", "Yesterday", or the date. */
 export function groupByDay(entries: LedgerEntry[], filter: LedgerFilter): LedgerSection[] {
   const sorted = entries
-    .filter((entry) => filter === 'all' || entry.direction === filter)
-    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    .filter((entry) => filter === 'all' || entry.status === filter)
+    .map((entry) => ({ entry, at: lastActivity(entry) }))
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 
   const sections: LedgerSection[] = [];
-  for (const entry of sorted) {
-    const title = formatDayLabel(entry.createdAt);
+  for (const { entry, at } of sorted) {
+    const title = formatDayLabel(at);
     const current = sections.at(-1);
     if (current?.title === title) current.data.push(entry);
     else sections.push({ title, data: [entry] });

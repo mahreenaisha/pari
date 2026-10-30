@@ -1,7 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeOutDown, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarInset } from '@/components/navigation/tab-bar-inset';
@@ -13,8 +13,10 @@ import { useContentWidth } from '@/lib/use-content-width';
 import type { Profile } from '@/types/profile';
 import { colors, screenPadding, spacing } from '@/theme';
 
+import { PaymentMatchCard } from './payment-match-card';
 import { QrCode } from './qr-code';
 import { useProfile } from './use-profile';
+import { useQrPayments } from './use-qr-payments';
 
 /** Space kept below the orb for the name and actions; the orb is sized to fit what's left. */
 const FOOTER_HEIGHT = 144;
@@ -24,6 +26,8 @@ export function QrScreen() {
   const tabBarInset = useTabBarInset();
   const width = useContentWidth();
   const [stageHeight, setStageHeight] = useState(0);
+  const { data: payments } = useQrPayments();
+  const [payment, ...waiting] = payments ?? [];
 
   const stageSize = Math.round(
     Math.min(width - screenPadding * 2, stageHeight - FOOTER_HEIGHT - spacing.lg, 340),
@@ -31,20 +35,31 @@ export function QrScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + spacing.sm, paddingBottom: tabBarInset }]}>
-      <ScreenHeader overline="Get paid" title="Your code" />
+      <ScreenHeader overline="Get paid" title="Scan to pay" />
 
       <View style={styles.stage} onLayout={(event) => setStageHeight(event.nativeEvent.layout.height)}>
         {stageSize > 0 ? (
           <Animated.View entering={FadeIn.duration(300)}>
-            <MyCode size={stageSize} />
+            <MyCode size={stageSize} covered={Boolean(payment)} />
           </Animated.View>
         ) : null}
       </View>
+
+      {payment ? (
+        <Animated.View
+          key={payment.id}
+          entering={FadeInDown.duration(350)}
+          exiting={FadeOutDown.duration(200)}
+          style={[styles.match, { bottom: tabBarInset }]}>
+          <PaymentMatchCard payment={payment} waiting={waiting.length} />
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
 
-function MyCode({ size }: { size: number }) {
+/** `covered` while a payment match card sits over the footer. */
+function MyCode({ size, covered }: { size: number; covered: boolean }) {
   const { data: profile, isError, refetch } = useProfile();
   const cardSize = Math.round(size * 0.6);
 
@@ -58,7 +73,9 @@ function MyCode({ size }: { size: number }) {
         ) : null}
       </SkyOrb>
 
-      {isError ? (
+      {covered ? (
+        <View style={styles.footer} />
+      ) : isError ? (
         <View style={styles.footer}>
           <AppText variant="body" align="center" color={colors.textSecondary}>
             Couldn’t load your code.
@@ -66,7 +83,9 @@ function MyCode({ size }: { size: number }) {
           <PillButton label="Try again" onPress={() => void refetch()} />
         </View>
       ) : (
-        <Identity profile={profile} />
+        <Animated.View entering={FadeIn.duration(250)}>
+          <Identity profile={profile} />
+        </Animated.View>
       )}
     </View>
   );
@@ -89,14 +108,14 @@ function Identity({ profile }: { profile?: Profile }) {
 
   const share = () => {
     if (!profile) return;
-    void Share.share({ message: `Pay ${profile.name} with Pyari Pari: ${profile.qrPayload}` });
+    void Share.share({ message: `Pay ${profile.businessName} with Pyari Pari: ${profile.qrPayload}` });
   };
 
   return (
     <View style={styles.footer}>
       <View style={styles.names}>
-        <AppText variant="title" align="center" style={styles.name}>
-          {profile?.name ?? ' '}
+        <AppText variant="title" align="center" numberOfLines={1} style={styles.name}>
+          {profile?.businessName ?? ' '}
         </AppText>
         <AppText variant="caption" align="center">
           {profile?.paymentAddress ?? ' '}
@@ -158,5 +177,10 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  match: {
+    position: 'absolute',
+    left: screenPadding,
+    right: screenPadding,
   },
 });

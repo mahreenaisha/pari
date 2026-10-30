@@ -1,12 +1,17 @@
 import type { LedgerEntry } from './ledger';
 
-export type AssistantTurn = {
-  /** What the user said. Empty when nothing was heard. */
+/** What the assistant expects to hear, which decides how the speech is interpreted. */
+export type ListenFor = 'entry' | 'phone' | 'answer';
+
+export type VoiceResult = {
+  /** What the merchant said. Empty when nothing was heard. */
   transcript: string;
-  /** What the assistant answered. */
-  reply: string;
-  /** Ledger entry created from the request, if any. */
-  entry?: LedgerEntry;
+  /** For `entry`: the extracted, still unconfirmed entry. */
+  draft?: LedgerEntry;
+  /** For `phone`: ten digits. */
+  phone?: string;
+  /** For `answer`: a spoken "haan" or "nahi". */
+  answer?: 'yes' | 'no';
 };
 
 export type VoiceSessionHandlers = {
@@ -19,7 +24,7 @@ export type VoiceSessionHandlers = {
 };
 
 export type VoiceSession = {
-  /** Stops capturing and resolves with the assistant's answer. */
-  finish: () => Promise<AssistantTurn>;
+  /** Stops capturing and resolves with the interpreted speech. */
+  finish: () => Promise<VoiceResult>;
   cancel: () => void;
 };

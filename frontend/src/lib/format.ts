@@ -1,5 +1,3 @@
-import type { MoneyDirection } from '@/types/ledger';
-
 const LOCALE = 'en-IN';
 
 const money = new Intl.NumberFormat(LOCALE, {
@@ -16,8 +14,9 @@ export function formatMoney(paise: number) {
   return money.format(paise / 100);
 }
 
-export function formatSignedMoney(paise: number, direction: MoneyDirection) {
-  return `${direction === 'in' ? '+' : '−'}${formatMoney(paise)}`;
+/** "9876543210" → "98765 43210", the way Indian mobile numbers are usually read out. */
+export function formatPhone(digits: string) {
+  return digits.length === 10 ? `${digits.slice(0, 5)} ${digits.slice(5)}` : digits;
 }
 
 export function formatTime(iso: string) {

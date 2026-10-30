@@ -30,6 +30,6 @@ export const colors = {
   /** Dark ink used on light "cloud" surfaces such as the QR card. */
   ink: '#0B1636',
 
-  moneyIn: '#A4C0FF',
-  moneyOut: '#F3F6FF',
+  /** Money a customer still owes. */
+  due: '#A4C0FF',
 } as const;

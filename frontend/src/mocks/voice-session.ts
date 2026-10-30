@@ -1,67 +1,55 @@
-import { formatMoney } from '@/lib/format';
-import type { AssistantTurn, VoiceSession, VoiceSessionHandlers } from '@/types/assistant';
-import type { LedgerEntry } from '@/types/ledger';
+import type { ListenFor, VoiceResult, VoiceSession, VoiceSessionHandlers } from '@/types/assistant';
 
 import { mockDb } from './db';
 
-type EntryDraft = Pick<LedgerEntry, 'party' | 'note' | 'amount' | 'direction'>;
-
 type Script = {
   transcript: string;
-  respond: () => Omit<AssistantTurn, 'transcript'>;
+  interpret: () => Omit<VoiceResult, 'transcript'>;
 };
 
-function record(draft: EntryDraft, reply: (entry: LedgerEntry) => string) {
-  const entry: LedgerEntry = {
-    ...draft,
-    id: `le_${Date.now()}`,
-    source: 'voice',
-    createdAt: new Date().toISOString(),
-  };
-  mockDb.ledger.unshift(entry);
-  return { entry, reply: reply(entry) };
-}
-
-const scripts: Script[] = [
+const entryScripts: Script[] = [
   {
-    transcript: 'Ramesh paid me five hundred rupees for the rent',
-    respond: () =>
-      record(
-        { party: 'Ramesh Kumar', note: 'Rent', amount: 50_000, direction: 'in' },
-        (entry) => `Got it. ${formatMoney(entry.amount)} from Ramesh is in your ledger.`,
-      ),
+    transcript: 'Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki',
+    interpret: () => ({
+      draft: mockDb.createDraft({ customerName: 'Gupta ji', total: 35_000, paid: 20_000, method: 'upi' }),
+    }),
   },
   {
-    transcript: 'I gave Sunita twelve hundred for the groceries',
-    respond: () =>
-      record(
-        { party: 'Sunita Devi', note: 'Groceries', amount: 120_000, direction: 'out' },
-        (entry) => `Noted ${formatMoney(entry.amount)} paid to Sunita for groceries.`,
-      ),
+    transcript: 'Sunita ji ne 1200 ka samaan liya, 500 cash diye',
+    interpret: () => ({
+      draft: mockDb.createDraft({ customerName: 'Sunita Devi', total: 120_000, paid: 50_000, method: 'cash' }),
+    }),
   },
   {
-    transcript: 'How much money came in this week',
-    respond: () => {
-      const weekAgo = Date.now() - 7 * 86_400_000;
-      const total = mockDb.ledger
-        .filter((e) => e.direction === 'in' && Date.parse(e.createdAt) >= weekAgo)
-        .reduce((sum, e) => sum + e.amount, 0);
-      return { reply: `You received ${formatMoney(total)} in the last seven days.` };
-    },
+    transcript: 'Rahul ne 80 ki chai li, poore paise de diye',
+    interpret: () => ({
+      draft: mockDb.createDraft({ customerName: 'Rahul', total: 8_000, paid: 8_000, method: 'cash' }),
+    }),
   },
 ];
 
-let nextScript = 0;
+const phoneScript: Script = { transcript: '98765 43210', interpret: () => ({ phone: '9876543210' }) };
+const answerScript: Script = { transcript: 'Haan', interpret: () => ({ answer: 'yes' }) };
+
+/** Speech-to-text plus extraction takes longest for a full entry. */
+const THINKING_MS: Record<ListenFor, number> = { entry: 1100, phone: 500, answer: 400 };
+
+let nextEntryScript = 0;
+
+function pickScript(listenFor: ListenFor) {
+  if (listenFor === 'phone') return phoneScript;
+  if (listenFor === 'answer') return answerScript;
+  return entryScripts[nextEntryScript++ % entryScripts.length];
+}
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Plays back a scripted utterance with a believable input level, then answers it. */
-export function startMockVoiceSession({
-  onLevel,
-  onTranscript,
-  onSilence,
-}: VoiceSessionHandlers): VoiceSession {
-  const script = scripts[nextScript++ % scripts.length];
+/** Plays back a scripted utterance with a believable input level, then interprets it. */
+export function startMockVoiceSession(
+  listenFor: ListenFor,
+  { onLevel, onTranscript, onSilence }: VoiceSessionHandlers,
+): VoiceSession {
+  const script = pickScript(listenFor);
   const words = script.transcript.split(' ');
   const timers = new Set<ReturnType<typeof setTimeout>>();
   let heard = 0;
@@ -115,11 +103,9 @@ export function startMockVoiceSession({
   return {
     finish: async () => {
       stop();
-      await wait(1100);
-      if (heard === 0) {
-        return { transcript: '', reply: "I didn't catch that. Tap the sky and try again." };
-      }
-      return { transcript: script.transcript, ...script.respond() };
+      await wait(THINKING_MS[listenFor]);
+      if (heard === 0) return { transcript: '' };
+      return { transcript: script.transcript, ...script.interpret() };
     },
     cancel: stop,
   };

@@ -1,12 +1,13 @@
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
-import { Icon } from '@/components/ui/icon';
-import { formatSignedMoney, formatTime } from '@/lib/format';
+import { Icon, type IconName } from '@/components/ui/icon';
+import { formatMoney, formatTime } from '@/lib/format';
 import type { LedgerEntry } from '@/types/ledger';
 import { colors, radii, spacing } from '@/theme';
 
 import { Avatar } from './avatar';
+import { lastActivity } from './use-ledger';
 
 const AVATAR = 42;
 const INSET = spacing.md;
@@ -17,36 +18,44 @@ type LedgerRowProps = {
   last: boolean;
 };
 
+function describe(entry: LedgerEntry): { icon: IconName; text: string } {
+  if (entry.status === 'closed') {
+    const method = entry.payments.at(-1)?.method;
+    if (method === 'link') return { icon: 'closed', text: 'Closed by link' };
+    if (method === 'qr') return { icon: 'closed', text: 'Closed by QR' };
+    return { icon: 'closed', text: 'Paid in full' };
+  }
+  if (entry.link?.status === 'sent') return { icon: 'link', text: 'Link sent' };
+  if (entry.paid > 0) return { icon: 'open', text: `Paid ${formatMoney(entry.paid)}` };
+  return { icon: 'open', text: 'Nothing paid yet' };
+}
+
 export function LedgerRow({ entry, first, last }: LedgerRowProps) {
-  const incoming = entry.direction === 'in';
-  const meta = [entry.note, formatTime(entry.createdAt)].filter(Boolean).join(' · ');
+  const open = entry.status === 'open';
+  const { icon, text } = describe(entry);
 
   return (
     <View style={[styles.row, first && styles.first, last && styles.last]}>
-      <Avatar name={entry.party} size={AVATAR} />
+      <Avatar name={entry.customer.name} size={AVATAR} />
       <View style={styles.body}>
         <AppText variant="bodyStrong" numberOfLines={1}>
-          {entry.party}
+          {entry.customer.name}
         </AppText>
         <View style={styles.meta}>
-          {entry.source !== 'manual' ? (
-            <Icon
-              name={entry.source === 'voice' ? 'voice' : 'qr'}
-              size={13}
-              color={colors.textTertiary}
-            />
-          ) : null}
+          <Icon name={icon} size={13} color={open ? colors.due : colors.textTertiary} />
           <AppText variant="caption" numberOfLines={1} style={styles.metaText}>
-            {meta}
+            {`${text} · ${formatTime(lastActivity(entry))}`}
           </AppText>
         </View>
       </View>
-      <AppText
-        variant="bodyStrong"
-        color={incoming ? colors.moneyIn : colors.moneyOut}
-        style={styles.amount}>
-        {formatSignedMoney(entry.amount, entry.direction)}
-      </AppText>
+      <View style={styles.amount}>
+        <AppText variant="bodyStrong" color={open ? colors.due : colors.textSecondary} style={styles.figure}>
+          {formatMoney(open ? entry.pending : entry.total)}
+        </AppText>
+        <AppText variant="caption" color={colors.textTertiary}>
+          {open ? 'baaki' : 'paid'}
+        </AppText>
+      </View>
       {last ? null : <View style={styles.divider} />}
     </View>
   );
@@ -82,6 +91,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   amount: {
+    alignItems: 'flex-end',
+    gap: 1,
+  },
+  figure: {
     fontVariant: ['tabular-nums'],
   },
   divider: {

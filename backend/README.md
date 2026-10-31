@@ -1,6 +1,6 @@
 # Pari backend
 
-Pari is a voice-first udhar (credit) ledger for Paytm merchants. The merchant says "Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki". Pari reads the entry back and, once confirmed, sends a Paytm link for the pending ₹150. The entry closes when the link is paid. If the money arrives on the shop QR instead, Pari asks "₹150 aaya, Gupta ji ka?".
+Pari is a voice-first udhar (credit) ledger for Paytm merchants. The merchant says "Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki". Pari reads the entry back and, once confirmed, sends a Paytm link for the pending ₹150. The entry closes when the link is paid. If the money arrives on the shop QR instead, Pari asks "₹150 aaya, Gupta ji ka?". Cash paid back is just said ("Gupta ji ne 100 diye"), and "Gupta ji ka kitna baaki hai?" gets an answer.
 
 The Express API is the product. The hands-free terminal (`npm run pari`) is a thin client over it, and a web or mobile frontend can use the same endpoints later.
 
@@ -62,7 +62,7 @@ Keys while Pari is listening:
 5. Make a second entry and answer **"nahi"** when Pari offers a link. Press **Q**. Pari asks *"₹150 aaya, Gupta ji ka?"*. Say **"haan"** and the entry closes.
 6. Press **E** to see everything.
 
-Also try: a number that isn't a mobile number ("ek do teen") and Pari asks again; a fully paid entry ("poora de diya") closes at once with no link; someone else's entry before answering ("Verma ji ko 150 udhaar"), which Pari reads back once the first is done; *"Gupta didi ne 200 ka samaan liya"*, and Pari asks whether Gupta didi and Gupta ji are the same person.
+Also try: a number that isn't a mobile number ("ek do teen") and Pari asks again; a fully paid entry ("poora de diya") closes at once with no link; someone else's entry before answering ("Verma ji ko 150 udhaar"), which Pari reads back once the first is done; *"Gupta didi ne 200 ka samaan liya"*, and Pari asks whether Gupta didi and Gupta ji are the same person; cash paid back (*"Gupta ji ne 100 diye"*), read back with what will be left and taken off the oldest entries first, and more than is owed closes the khaata with change to hand back; *"Gupta ji ka kitna baaki hai?"* or *"kul kitna udhaar hai?"*; an entry with no name (*"200 ka samaan diya"*), and Pari asks whose it is; two in one sentence (*"Gupta ji ne 100 diye aur Verma ji ne 200 ka samaan liya"*).
 
 ## API for a frontend
 
@@ -99,7 +99,7 @@ Set `PARI_PAYTM_MODE=sandbox`, `PAYTM_MID` and `PAYTM_MERCHANT_KEY` (16 characte
 
 ## Tests
 
-`npm test` runs about 570 tests with no network: number parsing, extraction checks, Pari's lines in all 11 languages, entry states, the reconciler, the conversation engine, the HTTP API and an end-to-end run through the terminal's API client against a live server. The LLM, speech and Paytm are all faked. `npm run typecheck` and `npm run build` should both be clean.
+`npm test` runs about 790 tests with no network: number parsing, extraction checks, Pari's lines in all 11 languages, entry states, the reconciler, the conversation engine, the HTTP API and an end-to-end run through the terminal's API client against a live server. The LLM, speech and Paytm are all faked. `npm run typecheck` and `npm run build` should both be clean.
 
 ## Layout
 

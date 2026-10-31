@@ -1,7 +1,17 @@
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { ConverseResponse, PariEventDto } from "../src/contracts/index.js";
-import { API_KEY, createTestContext, entryJson, type TestContext } from "./helpers.js";
+import {
+  API_KEY,
+  balanceJson,
+  createTestContext,
+  entryEvent,
+  entryJson,
+  recordJson,
+  repaymentEvent,
+  repaymentJson,
+  type TestContext,
+} from "./helpers.js";
 
 const DECK = "Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki.";
 const WAV = Buffer.alloc(4000, 1);
@@ -26,6 +36,14 @@ async function say(text: string, speak = false): Promise<ConverseResponse> {
   const res = await request(t.app).post("/api/converse").set(auth).send({ text, speak });
   expect(res.status, JSON.stringify(res.body)).toBe(200);
   return res.body as ConverseResponse;
+}
+
+/** The deck entry, saved without a link: Gupta ji owes ₹150. */
+async function guptaOwes150(): Promise<string> {
+  const turn = await say(DECK);
+  await say("haan");
+  await say("nahi");
+  return turn.entry!.id;
 }
 
 describe("Pari conversation (deck flow)", () => {
@@ -315,10 +333,30 @@ describe("Pari in the merchant's language", () => {
     expect(turn).toMatchObject({ state: "AWAITING_COLLECT_CHOICE", entry: { status: "OPEN", pendingRupees: 100 } });
     expect(t.chat.calls).toHaveLength(calls);
   });
+
+  it("reads a Tamil repayment back carefully when the amount was said as a word", async () => {
+    const REPAID = "முருகன் அண்ணா நூறு ரூபாய் கொடுத்தாரு";
+    await request(t.app).patch("/api/me").set(auth).send({ language: "ta-IN" }).expect(200);
+    t.chat.set(TAMIL, entryJson("Murugan anna", 350, 200, 150));
+    t.chat.set(REPAID, repaymentJson("Murugan anna", 100));
+    await say(TAMIL);
+    await say("ஆமா");
+    await say("வேண்டாம்");
+
+    expect(await say(REPAID)).toMatchObject({
+      state: "AWAITING_PAYMENT_CONFIRM",
+      reply: {
+        text: "ஒரு தடவை கவனமா கேளுங்க. Murugan anna கிட்ட இருந்து ₹100 வந்துச்சு. ₹150 பாக்கி இருந்தது, இனி ₹50 பாக்கி. save பண்ணட்டுமா?",
+        language: "ta-IN",
+      },
+      needsReview: true,
+    });
+    expect(await say("ஆமா")).toMatchObject({ state: "IDLE", reply: { text: "save ஆயிடுச்சு. Murugan anna-க்கு இன்னும் ₹50 பாக்கி." } });
+  });
 });
 
-const change = (customerName: string | null, total: number | null, paid: number | null, pending: number | null) =>
-  JSON.stringify({ intent: "entry", customerName, totalRupees: total, paidRupees: paid, pendingRupees: pending, items: null });
+/** An answer to a read-back holds only what was said in it. */
+const change = entryJson;
 
 describe("Pari at the confirm step", () => {
   it("'haan, lekin 250 diye' corrects the amounts instead of saving the old ones", async () => {
@@ -335,6 +373,17 @@ describe("Pari at the confirm step", () => {
 
     turn = await say("haan");
     expect(turn).toMatchObject({ state: "AWAITING_COLLECT_CHOICE", reply: { text: "Save ho gaya. ₹100 ka payment link bhejun?" } });
+  });
+
+  it("asks again when the model can't place a new number, instead of saving the old amounts", async () => {
+    const id = (await say(DECK)).entry!.id;
+    const turn = await say("haan, lekin 250 diye");
+    expect(turn).toMatchObject({
+      state: "AWAITING_ENTRY_CONFIRM",
+      reply: { text: "Kya badalna hai, samajh nahi aaya. Gupta ji, total ₹350, ₹200 mile, ₹150 baaki. Save karoon?" },
+    });
+    const saved = await request(t.app).get(`/api/entries/${id}`).set(auth).expect(200);
+    expect(saved.body.entry).toMatchObject({ status: "UNCONFIRMED", paidRupees: 200 });
   });
 
   it("'haan, 350 sahi hai' saves straight away", async () => {
@@ -465,5 +514,271 @@ describe("Pari and customer names", () => {
     const prompt = t.chat.calls.at(-1)![0]!.content;
     expect(prompt).toContain("Gupta ji");
     expect(prompt).not.toContain("Ruta ji");
+  });
+});
+
+describe("Pari takes cash paid back", () => {
+  const cash = () =>
+    t.ctx.db.selectFrom("payments").select(["entry_id", "amount_paise", "match_status"]).where("source", "=", "CASH").execute();
+  const entry = async (id: string) => (await request(t.app).get(`/api/entries/${id}`).set(auth).expect(200)).body.entry;
+
+  beforeEach(() => t.chat.set("Gupta ji ne 100 diye", repaymentJson("Gupta ji", 100)));
+
+  it("reads back what will be left, and saves it against the entry", async () => {
+    const id = await guptaOwes150();
+    let turn = await say("Gupta ji ne 100 diye");
+    expect(turn).toMatchObject({
+      state: "AWAITING_PAYMENT_CONFIRM",
+      reply: { text: "Gupta ji se ₹100 mile. ₹150 baaki tha, ab ₹50 bachega. Save karoon?", key: "repaymentReadback" },
+      needsReview: false,
+    });
+    expect(await cash()).toEqual([]);
+
+    turn = await say("haan");
+    expect(turn).toMatchObject({ state: "IDLE", reply: { text: "Save ho gaya. Gupta ji ka ab ₹50 baaki." } });
+    expect(await entry(id)).toMatchObject({ status: "OPEN", paidRupees: 300, pendingRupees: 50 });
+    expect(await cash()).toEqual([{ entry_id: id, amount_paise: 10000, match_status: "MATCHED" }]);
+  });
+
+  it("pays off the oldest entry first", async () => {
+    t.chat.set("Gupta ji ko 200 udhaar", entryJson("Gupta ji", 200, null, null));
+    t.chat.set("Gupta ji ne 250 diye", repaymentJson("Gupta ji", 250));
+    const older = await guptaOwes150();
+    const newer = (await say("Gupta ji ko 200 udhaar")).entry!.id;
+    await say("haan");
+    await say("nahi");
+
+    expect((await say("Gupta ji ne 250 diye")).reply.text).toBe("Gupta ji se ₹250 mile. ₹350 baaki tha, ab ₹100 bachega. Save karoon?");
+    expect((await say("haan")).reply.text).toBe("Save ho gaya. Gupta ji ka ab ₹100 baaki.");
+    expect(await entry(older)).toMatchObject({ status: "CLOSED", pendingRupees: 0 });
+    expect(await entry(newer)).toMatchObject({ status: "OPEN", pendingRupees: 100 });
+    expect(await cash()).toHaveLength(2);
+  });
+
+  it("records only what was owed, and says how much to hand back", async () => {
+    t.chat.set("Gupta ji ne 200 diye", repaymentJson("Gupta ji", 200));
+    const id = await guptaOwes150();
+    expect((await say("Gupta ji ne 200 diye")).reply.text).toBe(
+      "Gupta ji ne ₹200 diye, par udhaar ₹150 hi tha. Khaata band ho jayega, ₹50 wapas dene hain. Save karoon?",
+    );
+    expect((await say("haan")).reply.text).toBe("Save ho gaya. Gupta ji ka khaata band. ₹50 wapas dena mat bhooliye.");
+    expect(await entry(id)).toMatchObject({ status: "CLOSED", pendingRupees: 0 });
+    expect(await cash()).toEqual([{ entry_id: id, amount_paise: 15000, match_status: "MATCHED" }]);
+  });
+
+  it("takes 'poora' as everything owed", async () => {
+    t.chat.set("Gupta ji ne poora chuka diya", repaymentJson("Gupta ji", null, true));
+    await guptaOwes150();
+    expect((await say("Gupta ji ne poora chuka diya")).reply.text).toBe("Gupta ji se poore ₹150 mile. Khaata band ho jayega. Save karoon?");
+    expect((await say("haan")).reply.text).toBe("Save ho gaya. Gupta ji ka khaata band.");
+  });
+
+  it("expires a payment link the cash paid off, and says not to pay it", async () => {
+    t.chat.set("Gupta ji ne 150 diye", repaymentJson("Gupta ji", 150));
+    await say(DECK);
+    await say("haan");
+    await say("haan");
+    await say("9876543210");
+    const sent = await say("haan");
+
+    await say("Gupta ji ne 150 diye");
+    expect((await say("haan")).reply.text).toBe(
+      "Save ho gaya. Gupta ji ka khaata band. Gupta ji ko bata dijiye ki ab payment link se na bharein.",
+    );
+    const link = await t.ctx.db
+      .selectFrom("payment_links")
+      .select("status")
+      .where("order_id", "=", sent.link!.orderId)
+      .executeTakeFirstOrThrow();
+    expect(link.status).toBe("EXPIRED");
+  });
+
+  it("asks whether QR money of the same amount is this money, so it isn't counted twice", async () => {
+    const id = await guptaOwes150();
+    await request(t.app).post("/api/dev/simulate/qr").set(auth).send({ amountRupees: 100 }).expect(201);
+    await new Promise((r) => setTimeout(r, 50));
+
+    let turn = await say("Gupta ji ne 100 diye");
+    expect(turn).toMatchObject({
+      state: "AWAITING_PAYMENT_CONFIRM",
+      reply: { text: "QR pe ₹100 aaye hain, abhi kisi khaate mein nahi jude. Kya yeh Gupta ji wale hi hain?", key: "qrSameMoney" },
+    });
+    turn = await say("haan");
+    expect(turn).toMatchObject({ state: "IDLE", reply: { key: "qrMatched" }, entry: { id, pendingRupees: 50 } });
+    expect(await cash()).toEqual([]);
+  });
+
+  it("records the cash when the QR money was someone else's", async () => {
+    const id = await guptaOwes150();
+    await request(t.app).post("/api/dev/simulate/qr").set(auth).send({ amountRupees: 100 }).expect(201);
+    await new Promise((r) => setTimeout(r, 50));
+    await say("Gupta ji ne 100 diye");
+
+    expect(await say("nahi")).toMatchObject({
+      state: "AWAITING_PAYMENT_CONFIRM",
+      reply: { text: "Gupta ji se ₹100 mile. ₹150 baaki tha, ab ₹50 bachega. Save karoon?" },
+    });
+    expect(await say("haan")).toMatchObject({ state: "IDLE", reply: { text: "Save ho gaya. Gupta ji ka ab ₹50 baaki." } });
+    expect(await cash()).toEqual([{ entry_id: id, amount_paise: 10000, match_status: "MATCHED" }]);
+  });
+
+  it("'nahi, 120 diye' corrects the amount", async () => {
+    t.chat.set("nahi, 120 diye", repaymentJson(null, 120));
+    await guptaOwes150();
+    await say("Gupta ji ne 100 diye");
+    const turn = await say("nahi, 120 diye");
+    expect(turn).toMatchObject({
+      state: "AWAITING_PAYMENT_CONFIRM",
+      reply: { text: "Theek kiya. Gupta ji se ₹120 mile. ₹150 baaki tha, ab ₹30 bachega. Save karoon?", key: "repaymentCorrected" },
+      needsReview: false,
+    });
+    expect(t.chat.calls.at(-1)![0]!.content).toContain("answering Pari's read-back of this repayment: Gupta ji paid back 100 rupees");
+  });
+
+  it("asks again when the model can't place a new amount, instead of dropping the money", async () => {
+    await guptaOwes150();
+    await say("Gupta ji ne 100 diye");
+    expect(await say("nahi, 120 diye")).toMatchObject({
+      state: "AWAITING_PAYMENT_CONFIRM",
+      reply: { text: "Kya badalna hai, samajh nahi aaya. Gupta ji se ₹100 mile. ₹150 baaki tha, ab ₹50 bachega. Save karoon?" },
+    });
+    expect(await cash()).toEqual([]);
+  });
+
+  it("'nahi, Verma ji ne diye' moves the money to Verma ji", async () => {
+    t.chat.set("nahi, Verma ji ne diye", repaymentJson("Verma ji", null));
+    await guptaOwes150();
+    await say("Verma ji ko 150 udhaar");
+    await say("haan");
+    await say("nahi");
+    await say("Gupta ji ne 100 diye");
+
+    expect((await say("nahi, Verma ji ne diye")).reply.text).toBe("Theek kiya. Verma ji se ₹100 mile. ₹150 baaki tha, ab ₹50 bachega. Save karoon?");
+    expect((await say("haan")).reply.text).toBe("Save ho gaya. Verma ji ka ab ₹50 baaki.");
+  });
+
+  it("'nahi' drops it, and nothing is recorded", async () => {
+    const id = await guptaOwes150();
+    await say("Gupta ji ne 100 diye");
+    expect(await say("nahi")).toMatchObject({ state: "IDLE", reply: { key: "entryRejected" } });
+    expect(await entry(id)).toMatchObject({ pendingRupees: 150 });
+    expect(await cash()).toEqual([]);
+  });
+
+  it("says so when the customer owes nothing, or has no khaata", async () => {
+    t.chat.set("Verma ji ne 100 diye", repaymentJson("Verma ji", 100));
+    t.chat.set("Mehta ji ne 100 diye", repaymentJson("Mehta ji", 100));
+    expect(await say("Verma ji ne 100 diye")).toMatchObject({ state: "IDLE", reply: { text: "Verma ji ka koi udhaar baaki nahi hai." } });
+    expect(await say("Mehta ji ne 100 diye")).toMatchObject({ state: "IDLE", reply: { text: "Mehta ji ka koi khaata nahi mila." } });
+    const customers = await t.ctx.db.selectFrom("customers").select("name").execute();
+    expect(customers.map((c) => c.name)).not.toContain("Mehta ji");
+  });
+
+  it("names a repayment left unsaved when the session ran out", async () => {
+    await guptaOwes150();
+    await say("Gupta ji ne 100 diye");
+    t.ctx.conversation.getSession(t.merchantId).updatedAt -= 10 * 60_000;
+    expect((await say("aaj bahut garmi hai")).reply.text).toMatch(/^Gupta ji wali entry save nahi hui thi\. /);
+  });
+});
+
+describe("Pari asks for what wasn't said", () => {
+  beforeEach(() => t.chat.set("200 ka saamaan diya", entryJson(null, 200, null, null)));
+
+  it("asks whose it is, and hears the answer with what came before", async () => {
+    t.chat.set("200 ka saamaan diya. Verma ji", entryJson("Verma ji", 200, null, null));
+    let turn = await say("200 ka saamaan diya");
+    expect(turn).toMatchObject({ state: "AWAITING_NAME", reply: { text: "Kiske naam likhoon?", key: "askName" } });
+    turn = await say("Verma ji");
+    expect(turn).toMatchObject({
+      state: "AWAITING_ENTRY_CONFIRM",
+      reply: { text: "Verma ji, ₹200 udhaar. Save karoon?" },
+      entry: { transcript: "200 ka saamaan diya. Verma ji", needsReview: false },
+    });
+  });
+
+  it("asks how much, then reads the repayment back", async () => {
+    t.chat.set("Gupta ji ne paise diye", repaymentJson("Gupta ji", null));
+    t.chat.set("Gupta ji ne paise diye. 100", repaymentJson("Gupta ji", 100));
+    await guptaOwes150();
+    expect(await say("Gupta ji ne paise diye")).toMatchObject({ state: "AWAITING_AMOUNT", reply: { text: "Gupta ji, kitne rupaye?" } });
+    expect(await say("100")).toMatchObject({
+      state: "AWAITING_PAYMENT_CONFIRM",
+      reply: { text: "Gupta ji se ₹100 mile. ₹150 baaki tha, ab ₹50 bachega. Save karoon?" },
+    });
+  });
+
+  it("a plain 'nahi' drops what was half said", async () => {
+    await say("200 ka saamaan diya");
+    const calls = t.chat.calls.length;
+    expect(await say("nahi")).toMatchObject({ state: "IDLE", reply: { key: "entryRejected" } });
+    expect(t.chat.calls).toHaveLength(calls);
+  });
+
+  it("asks for each piece once", async () => {
+    t.chat.set("200 ka saamaan diya. pata nahi kaun tha", entryJson(null, 200, null, null));
+    await say("200 ka saamaan diya");
+    expect(await say("pata nahi kaun tha")).toMatchObject({ state: "IDLE", reply: { key: "notAnEntry" } });
+  });
+});
+
+describe("Pari hears several things at once", () => {
+  it("reads each back in turn", async () => {
+    const BOTH = "Gupta ji ne 100 diye, aur Verma ji ko 150 udhaar";
+    t.chat.set(BOTH, recordJson(repaymentEvent("Gupta ji", 100), entryEvent("Verma ji", 150, null, null)));
+    await guptaOwes150();
+    expect(await say(BOTH)).toMatchObject({
+      state: "AWAITING_PAYMENT_CONFIRM",
+      reply: { text: "Gupta ji se ₹100 mile. ₹150 baaki tha, ab ₹50 bachega. Save karoon?" },
+    });
+    expect(await say("haan")).toMatchObject({
+      state: "AWAITING_ENTRY_CONFIRM",
+      reply: { text: "Save ho gaya. Gupta ji ka ab ₹50 baaki. Ab agli entry. Verma ji, ₹150 udhaar. Save karoon?" },
+    });
+  });
+
+  it("answers one it can't read back, and goes on to the next", async () => {
+    const BOTH = "Mehta ji ne 100 diye, aur Verma ji ko 150 udhaar";
+    t.chat.set(BOTH, recordJson(repaymentEvent("Mehta ji", 100), entryEvent("Verma ji", 150, null, null)));
+    expect(await say(BOTH)).toMatchObject({
+      state: "AWAITING_ENTRY_CONFIRM",
+      reply: { text: "Mehta ji ka koi khaata nahi mila. Ab agli entry. Verma ji, ₹150 udhaar. Save karoon?" },
+    });
+  });
+
+  it("a repayment said at an entry's read-back waits its turn", async () => {
+    t.chat.set("haan, aur Verma ji ne 50 diye", recordJson(repaymentEvent("Verma ji", 50)));
+    await say("Verma ji ko 150 udhaar");
+    await say("haan");
+    await say("nahi");
+    await say(DECK);
+    expect(await say("haan, aur Verma ji ne 50 diye")).toMatchObject({
+      state: "AWAITING_ENTRY_CONFIRM",
+      reply: { text: "Verma ji wali entry iske baad. Pehle yeh: Gupta ji, total ₹350, ₹200 mile, ₹150 baaki. Save karoon?" },
+    });
+  });
+});
+
+describe("Pari answers what's owed", () => {
+  it("for one customer", async () => {
+    t.chat.set("Gupta ji ka kitna baaki hai?", balanceJson("Gupta ji"));
+    t.chat.set("Verma ji ka kitna baaki hai?", balanceJson("Verma ji"));
+    await guptaOwes150();
+    expect(await say("Gupta ji ka kitna baaki hai?")).toMatchObject({
+      state: "IDLE",
+      reply: { text: "Gupta ji ka ₹150 baaki hai.", key: "customerOwes" },
+    });
+    expect((await say("Verma ji ka kitna baaki hai?")).reply.text).toBe("Verma ji ka koi udhaar baaki nahi hai.");
+  });
+
+  it("for the whole shop", async () => {
+    t.chat.set("kul kitna udhaar hai?", balanceJson(null));
+    expect((await say("kul kitna udhaar hai?")).reply.text).toBe("Abhi kisi ka udhaar baaki nahi hai.");
+    await guptaOwes150();
+    expect((await say("kul kitna udhaar hai?")).reply.text).toBe("Kul ₹150 baaki hai, ek hi khaate mein.");
+    await say("Verma ji ko 150 udhaar");
+    await say("haan");
+    await say("nahi");
+    expect((await say("kul kitna udhaar hai?")).reply.text).toBe("Kul ₹300 baaki hai, 2 khaaton mein.");
   });
 });

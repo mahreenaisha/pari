@@ -6,9 +6,18 @@ import type { EventBus } from "../events/bus.js";
 import { AppError } from "../helpers/errors.js";
 import type { Logger } from "../helpers/logger.js";
 import { DEFAULT_LANGUAGE, type MerchantLanguages } from "../languages.js";
-import { KNOWN_CUSTOMERS, type EntryExtractor } from "../llm/extractor.js";
+import {
+  hearEvent,
+  KNOWN_CUSTOMERS,
+  type EntryExtractor,
+  type ExtractionResult,
+  type HeardEntry,
+  type HeardEvent,
+  type HeardRepayment,
+  type Missing,
+} from "../llm/extractor.js";
 import { detectYesNo, otherWords, type YesNo } from "../llm/intent.js";
-import { joinLines, linesFor } from "../llm/lines/index.js";
+import { joinLines, linesFor, type RepaymentAmounts } from "../llm/lines/index.js";
 import {
   checkAmountsAgainstTranscript,
   extractNumbers,
@@ -16,7 +25,7 @@ import {
   parseIndianMobile,
   READS_NUMBER_WORDS,
 } from "../llm/numbers.js";
-import { applyCorrection, finalizeExtraction, hasAmounts, toExtraction, type Extraction } from "../llm/schemas.js";
+import { applyCorrection, toExtraction, type Extraction, type RawEntry } from "../llm/schemas.js";
 import type { CollectService } from "../ledger/collect.js";
 import { matchName } from "../ledger/names.js";
 import type { Reconciler } from "../ledger/reconciler.js";
@@ -24,11 +33,14 @@ import {
   confirmEntry,
   createCustomer,
   createUnconfirmedEntry,
+  customerBalancePaise,
   getCustomer,
   getEntry,
   knownCustomerNames,
   matchCustomers,
   rejectEntry,
+  settleCash,
+  shopBalance,
   updateUnconfirmedEntry,
   type Db,
   type EntryWithCustomer,
@@ -42,18 +54,34 @@ interface QrTurn {
   index: number;
 }
 
-/** An entry as heard, before it has a customer or a row. */
-interface Heard {
-  extraction: Extraction;
-  needsReview: boolean;
-  transcript: string;
-}
-
 /** "Gupta didi aur Gupta ji ek hi hain?", asked about each customer the name only maybe fits. */
 interface CustomerChoice {
-  heard: Heard;
+  heard: HeardEvent;
   candidateIds: string[];
   index: number;
+}
+
+/** Cash paid back, read back against what the customer owes and waiting for a yes. */
+interface PaymentTurn {
+  heard: HeardRepayment;
+  customerId: string;
+  customerName: string;
+  /** What the merchant said was paid, or everything owed for "poora". */
+  saidPaise: number;
+  /** What goes into the khaata: what was paid, up to what is owed. */
+  amountPaise: number;
+  owedPaise: number;
+  /** A QR payment of the same amount waiting to be matched, asked about first so the money isn't counted twice. */
+  qr: { paymentId: string; entryId: string } | null;
+}
+
+/** An entry or repayment said without a name or an amount, waiting for the one Pari asked for. */
+interface Asking {
+  /** What the merchant said so far. */
+  text: string;
+  /** What Pari has asked for already, so each is asked for once. */
+  asked: Missing[];
+  customerName: string | null;
 }
 
 export interface Session {
@@ -66,8 +94,10 @@ export interface Session {
   phone: string | null;
   qr: QrTurn | null;
   choice: CustomerChoice | null;
-  /** Entries said while another was waiting for a yes, read back in turn. */
-  queue: Heard[];
+  payment: PaymentTurn | null;
+  asking: Asking | null;
+  /** Entries and repayments said while another was waiting for a yes, read back in turn. */
+  queue: HeardEvent[];
   /** Customers whose entries were never saved because the session ran out, told on the next turn. */
   dropped: string[];
   /** The merchant's language, read again on every turn so a change in the app applies straight away. */
@@ -129,6 +159,8 @@ export class ConversationEngine {
         phone: null,
         qr: null,
         choice: null,
+        payment: null,
+        asking: null,
         queue: [],
         dropped: [],
         language: DEFAULT_LANGUAGE,
@@ -152,7 +184,13 @@ export class ConversationEngine {
   releasePayment(merchantId: string, paymentId: string): Promise<void> {
     return this.withLock(merchantId, async () => {
       const session = this.sessions.get(merchantId);
-      if (session?.state === "AWAITING_QR_MATCH" && session.qr?.paymentId === paymentId) {
+      const asked =
+        session?.state === "AWAITING_QR_MATCH"
+          ? session.qr?.paymentId
+          : session?.state === "AWAITING_PAYMENT_CONFIRM"
+            ? session.payment?.qr?.paymentId
+            : undefined;
+      if (session && asked === paymentId) {
         this.toIdle(session);
         session.updatedAt = Date.now();
       }
@@ -164,7 +202,10 @@ export class ConversationEngine {
       const session = this.getSession(merchantId);
       session.language = await this.deps.languages.get(merchantId);
       let step = await this.dispatch(session, text.trim());
-      if (step.state === "IDLE") step = await this.whatNext(session, step);
+      if (step.state === "IDLE") {
+        this.toIdle(session);
+        step = await this.whatNext(session, step);
+      }
       if (session.dropped.length) {
         step = { ...step, reply: joinLines(linesFor(session.language).unsaved(session.dropped.join(", ")), step.reply) };
         session.dropped = [];
@@ -194,17 +235,24 @@ export class ConversationEngine {
     session.phone = null;
     session.qr = null;
     session.choice = null;
+    session.payment = null;
+    session.asking = null;
   }
 
   private async dispatch(session: Session, text: string): Promise<Step> {
     const answer = detectYesNo(text, session.language);
     switch (session.state) {
       case "IDLE":
-        return this.newEntry(session, text);
+        return this.onHeard(session, await this.extract(session, text), text, []);
+      case "AWAITING_NAME":
+      case "AWAITING_AMOUNT":
+        return this.onMissing(session, text, answer);
       case "AWAITING_CUSTOMER_CHOICE":
         return this.onCustomerChoice(session, answer);
       case "AWAITING_ENTRY_CONFIRM":
         return this.onEntryConfirm(session, text, answer);
+      case "AWAITING_PAYMENT_CONFIRM":
+        return this.onPaymentConfirm(session, text, answer);
       case "AWAITING_COLLECT_CHOICE":
         return this.onCollectChoice(session, text, answer);
       case "AWAITING_PHONE":
@@ -216,41 +264,115 @@ export class ConversationEngine {
     }
   }
 
-  /** Once one thing is done: the next entry the merchant already said, else a QR payment waiting for a name. */
+  /**
+   * Once one thing is done: the next thing the merchant already said, else a QR payment waiting for a
+   * name. One answered on the spot, like a repayment from someone who owes nothing, goes on to the next.
+   */
   private async whatNext(session: Session, done: Step): Promise<Step> {
-    const heard = session.queue.shift();
-    if (heard) {
+    const say = linesFor(session.language);
+    let step = done;
+    for (let heard = session.queue.shift(); heard; heard = session.queue.shift()) {
       const next = await this.readBack(session, heard);
-      return { ...done, ...next, reply: joinLines(done.reply, linesFor(session.language).nextEntry(), next.reply) };
+      step = { ...step, ...next, reply: joinLines(step.reply, say.nextEntry(), next.reply) };
+      if (next.state !== "IDLE") return step;
     }
     const qr = await this.nextQrQuestion(session);
-    return qr ? { ...done, state: qr.state, reply: joinLines(done.reply, qr.reply) } : done;
+    return qr ? { ...step, state: qr.state, reply: joinLines(step.reply, qr.reply) } : step;
   }
 
-  // ------------------------------------------------------------- entry flow
+  // ------------------------------------------------------------ what was said
 
-  private async newEntry(session: Session, text: string): Promise<Step> {
+  /** What the model heard: answered, asked about, or read back. `asked` is what Pari already asked for. */
+  private async onHeard(session: Session, result: ExtractionResult, text: string, asked: Missing[]): Promise<Step> {
     const say = linesFor(session.language);
-    const result = await this.extract(session, text);
-    if (result.kind === "not_entry") return { state: "IDLE", reply: say.notAnEntry() };
-    if (result.kind === "unclear") return { state: "IDLE", reply: say.amountsUnclear() };
-    return this.readBack(session, { extraction: result.extraction, needsReview: result.needsReview, transcript: text });
+    switch (result.kind) {
+      case "not_entry":
+        return { state: "IDLE", reply: say.notAnEntry() };
+      case "unclear":
+        return { state: "IDLE", reply: say.amountsUnclear() };
+      case "balance":
+        return this.answerBalance(session, result.customerName);
+      case "missing": {
+        if (asked.includes(result.missing)) return { state: "IDLE", reply: say.notAnEntry() };
+        session.asking = { text, asked: [...asked, result.missing], customerName: result.customerName };
+        if (result.missing === "amount" && result.customerName) {
+          return { state: "AWAITING_AMOUNT", reply: say.askAmount(result.customerName) };
+        }
+        return { state: "AWAITING_NAME", reply: say.askName() };
+      }
+      case "events": {
+        const [first, ...rest] = result.events;
+        session.queue.push(...rest);
+        return this.readBack(session, first!);
+      }
+    }
   }
 
-  /** Finds the customer, first asking about any the name only maybe fits, then reads the entry back. */
-  private async readBack(session: Session, heard: Heard): Promise<Step> {
-    const spoken = heard.extraction.customerName;
+  /** The name or amount Pari asked for, heard together with what was said before it. A plain no drops both. */
+  private async onMissing(session: Session, text: string, answer: YesNo): Promise<Step> {
+    const asking = session.asking!;
+    this.toIdle(session);
+    if (answer === "no" && otherWords(text, session.language).length === 0) {
+      return { state: "IDLE", reply: linesFor(session.language).entryRejected() };
+    }
+    const together = `${asking.text.replace(/[\s.!?।]+$/u, "")}. ${text}`;
+    return this.onHeard(session, await this.extract(session, together), together, asking.asked);
+  }
+
+  /** Finds the customer, first asking about any the name only maybe fits, then reads back what was said. */
+  private async readBack(session: Session, heard: HeardEvent): Promise<Step> {
+    const spoken = nameOf(heard);
     const matches = await matchCustomers(this.deps.db, session.merchantId, spoken);
     const best = matches[0];
     if (best?.match === "maybe") {
       session.choice = { heard, candidateIds: matches.map((m) => m.customer.id), index: 0 };
       return { state: "AWAITING_CUSTOMER_CHOICE", reply: linesFor(session.language).sameCustomer(spoken, best.customer.name) };
     }
-    if (best) return this.startEntry(session, heard, best.customer, false);
-    return this.startEntry(session, heard, await createCustomer(this.deps.db, session.merchantId, spoken), true);
+    return this.withCustomer(session, heard, best?.customer ?? null);
   }
 
-  private async startEntry(session: Session, heard: Heard, customer: Customer, isNew: boolean): Promise<Step> {
+  /** Once it's known whose it is. Nobody is a new customer for an entry, and no one to take money from. */
+  private async withCustomer(session: Session, heard: HeardEvent, customer: Customer | null): Promise<Step> {
+    if (heard.kind === "repayment") return this.readBackRepayment(session, heard, customer, false);
+    if (customer) return this.startEntry(session, heard, customer, false);
+    return this.startEntry(session, heard, await createCustomer(this.deps.db, session.merchantId, heard.extraction.customerName), true);
+  }
+
+  private async onCustomerChoice(session: Session, answer: YesNo): Promise<Step> {
+    const say = linesFor(session.language);
+    const choice = session.choice!;
+    const spoken = nameOf(choice.heard);
+    if (answer === "yes") {
+      const customer = await getCustomer(this.deps.db, session.merchantId, choice.candidateIds[choice.index]!);
+      session.choice = null;
+      return this.withCustomer(session, choice.heard, customer);
+    }
+    if (answer === "no") {
+      choice.index += 1;
+      const nextId = choice.candidateIds[choice.index];
+      if (nextId) {
+        const next = await getCustomer(this.deps.db, session.merchantId, nextId);
+        return { state: "AWAITING_CUSTOMER_CHOICE", reply: say.sameCustomer(spoken, next.name) };
+      }
+      session.choice = null;
+      return this.withCustomer(session, choice.heard, null);
+    }
+    return { state: "AWAITING_CUSTOMER_CHOICE", reply: say.notUnderstoodYesNo() };
+  }
+
+  /** Something new said instead of an answer: the question is dropped and the new thing read back. */
+  private async movedOn(session: Session, text: string, answer: YesNo): Promise<Step | null> {
+    if (answer !== "unknown") return null;
+    if (READS_NUMBER_WORDS.has(session.language) && !mentionsNumber(text)) return null;
+    const result = await this.extract(session, text);
+    if (result.kind !== "events") return null;
+    this.toIdle(session);
+    return this.onHeard(session, result, text, []);
+  }
+
+  // ------------------------------------------------------------- entry flow
+
+  private async startEntry(session: Session, heard: HeardEntry, customer: Customer, isNew: boolean): Promise<Step> {
     const say = linesFor(session.language);
     const entry = await createUnconfirmedEntry(this.deps.db, {
       merchantId: session.merchantId,
@@ -273,33 +395,12 @@ export class ConversationEngine {
     };
   }
 
-  private async onCustomerChoice(session: Session, answer: YesNo): Promise<Step> {
-    const say = linesFor(session.language);
-    const choice = session.choice!;
-    const spoken = choice.heard.extraction.customerName;
-    if (answer === "yes") {
-      const customer = await getCustomer(this.deps.db, session.merchantId, choice.candidateIds[choice.index]!);
-      session.choice = null;
-      return this.startEntry(session, choice.heard, customer, false);
-    }
-    if (answer === "no") {
-      choice.index += 1;
-      const nextId = choice.candidateIds[choice.index];
-      if (nextId) {
-        const next = await getCustomer(this.deps.db, session.merchantId, nextId);
-        return { state: "AWAITING_CUSTOMER_CHOICE", reply: say.sameCustomer(spoken, next.name) };
-      }
-      session.choice = null;
-      return this.startEntry(session, choice.heard, await createCustomer(this.deps.db, session.merchantId, spoken), true);
-    }
-    return { state: "AWAITING_CUSTOMER_CHOICE", reply: say.notUnderstoodYesNo() };
-  }
-
   private async onEntryConfirm(session: Session, text: string, answer: YesNo): Promise<Step> {
     const say = linesFor(session.language);
     const entry = await getEntry(this.deps.db, session.merchantId, session.entryId!);
-    if (mightChange(text, answer, entry, session.language)) {
-      const changed = await this.hearChange(session, text, answer, entry);
+    const readBack = [entry.total_paise, entry.paid_paise, entry.pending_paise].map(toRupees);
+    if (mightChange(text, answer, readBack, session.language)) {
+      const changed = await this.hearChange(session, text, answer, entry, readBack);
       if (changed) return changed;
     }
     if (answer === "yes") {
@@ -320,32 +421,53 @@ export class ConversationEngine {
   }
 
   /**
-   * "Haan, lekin 250 diye" or "nahi, Verma ji ka tha" corrects the entry. Someone else's entry said
-   * without a no waits in the queue while this one is asked again. Null when nothing changed.
+   * "Haan, lekin 250 diye" or "nahi, Verma ji ka tha" corrects the entry. Someone else's entry or
+   * repayment said without a no waits in the queue while this one is asked again. A new number the model
+   * couldn't place is asked about again, never saved or dropped on the yes or no. Null when nothing changed.
    */
-  private async hearChange(session: Session, text: string, answer: YesNo, entry: EntryWithCustomer): Promise<Step | null> {
+  private async hearChange(
+    session: Session,
+    text: string,
+    answer: YesNo,
+    entry: EntryWithCustomer,
+    readBack: number[],
+  ): Promise<Step | null> {
     const say = linesFor(session.language);
     const current = amountsOf(entry);
     const askAgain = (first: Line): Step => ({
       state: "AWAITING_ENTRY_CONFIRM",
       reply: joinLines(first, say.entryReadback(current, entry.needs_review)),
     });
-    const heard = await this.deps.extractor.hearChange(text, await this.knownNames(session), session.language, current);
-    if (heard.kind === "none") return null;
+    const heard = await this.deps.extractor.hearChange(text, await this.knownNames(session), session.language, {
+      kind: "entry",
+      entry: current,
+    });
+    if (heard.kind === "none") return saysNewNumber(text, readBack) ? askAgain(say.changeUnclear()) : null;
     if (heard.kind === "unclear") return askAgain(say.changeUnclear());
 
-    const { raw } = heard;
-    const fit = raw.customerName ? matchName(raw.customerName, entry.customer_name) : "exact";
+    const { event } = heard;
+    const fit = event.customerName ? matchName(event.customerName, entry.customer_name) : "exact";
     const sameCustomer = fit === "exact" || fit === "fuzzy";
-    if (!sameCustomer && answer !== "no" && hasAmounts(raw)) {
-      const another = finalizeExtraction(raw);
-      if (another.ok) {
-        session.queue.push({ extraction: another.value, needsReview: !amountsSpoken(another.value, text), transcript: text });
-        return askAgain(say.pendingFirst(another.value.customerName));
+    if (!sameCustomer && answer !== "no") {
+      const another = hearEvent(event, text);
+      if (another.kind === "heard") {
+        session.queue.push(another.event);
+        return askAgain(say.pendingFirst(nameOf(another.event)));
       }
     }
 
-    const corrected = toExtraction(sameCustomer ? entry.customer_name : raw.customerName, applyCorrection(raw, current), raw.items);
+    // Money said in answer to an entry was paid on it, whichever way the model filed it: "nahi, 250 diye".
+    const said: RawEntry =
+      event.type === "entry"
+        ? event
+        : {
+            type: "entry",
+            customerName: event.customerName,
+            totalRupees: null,
+            paidRupees: event.amountRupees ?? (event.full ? current.totalRupees : null),
+            pendingRupees: null,
+          };
+    const corrected = toExtraction(sameCustomer ? entry.customer_name : said.customerName, applyCorrection(said, current), said.items);
     if (!corrected.ok) return askAgain(say.changeUnclear());
     const transcript = `${entry.transcript ?? ""} / ${text}`;
     const needsReview = !amountsSpoken(corrected.value, transcript);
@@ -375,14 +497,201 @@ export class ConversationEngine {
     };
   }
 
-  /** A new entry said instead of an answer: the question is dropped and the entry read back. */
-  private async movedOn(session: Session, text: string, answer: YesNo): Promise<Step | null> {
-    if (answer !== "unknown") return null;
-    if (READS_NUMBER_WORDS.has(session.language) && !mentionsNumber(text)) return null;
-    const result = await this.extract(session, text);
-    if (result.kind !== "entry") return null;
+  // --------------------------------------------------------- repayment flow
+
+  /**
+   * Cash paid back, read against what the customer owes: more than that goes in as what was owed, with
+   * the rest to hand back. A QR payment of the same amount still waiting for a name is asked about first.
+   */
+  private async readBackRepayment(
+    session: Session,
+    heard: HeardRepayment,
+    customer: Customer | null,
+    corrected: boolean,
+  ): Promise<Step> {
+    const say = linesFor(session.language);
+    session.payment = null;
+    if (!customer) return { state: "IDLE", reply: say.noSuchCustomer(heard.customerName) };
+    const owedPaise = await customerBalancePaise(this.deps.db, session.merchantId, customer.id);
+    if (owedPaise === 0) return { state: "IDLE", reply: say.nothingOwed(customer.name) };
+    const saidPaise = heard.amountRupees === null ? owedPaise : toPaise(heard.amountRupees);
+    const payment: PaymentTurn = {
+      heard,
+      customerId: customer.id,
+      customerName: customer.name,
+      saidPaise,
+      amountPaise: Math.min(saidPaise, owedPaise),
+      owedPaise,
+      qr: await this.waitingQr(session.merchantId, customer.id, saidPaise),
+    };
+    session.payment = payment;
+    if (payment.qr) return { state: "AWAITING_PAYMENT_CONFIRM", reply: say.qrSameMoney(customer.name, toRupees(saidPaise)) };
+    const amounts = repaymentAmounts(payment);
+    return {
+      state: "AWAITING_PAYMENT_CONFIRM",
+      reply: corrected ? say.repaymentCorrected(amounts, heard.needsReview) : say.repaymentReadback(amounts, heard.needsReview),
+      needsReview: heard.needsReview,
+    };
+  }
+
+  /** A QR payment of this amount, waiting to be matched, that could be this customer's. */
+  private async waitingQr(merchantId: string, customerId: string, amountPaise: number): Promise<PaymentTurn["qr"]> {
+    const suggestions = await this.deps.reconciler.getSuggestions(merchantId);
+    for (const { payment, candidates } of suggestions) {
+      if (payment.source !== "QR" || toPaise(payment.amountRupees) !== amountPaise) continue;
+      const theirs = candidates.find((c) => c.entry.customer.id === customerId);
+      if (theirs) return { paymentId: payment.id, entryId: theirs.entry.id };
+    }
+    return null;
+  }
+
+  private async onPaymentConfirm(session: Session, text: string, answer: YesNo): Promise<Step> {
+    const say = linesFor(session.language);
+    const payment = session.payment!;
+    if (payment.qr) return this.onSameMoney(session, payment, answer);
+    const a = repaymentAmounts(payment);
+    const readBack = [toRupees(payment.saidPaise), a.amountRupees, a.owedRupees, a.leftRupees, a.changeRupees];
+    if (mightChange(text, answer, readBack, session.language)) {
+      const changed = await this.hearPaymentChange(session, text, answer, payment, readBack);
+      if (changed) return changed;
+    }
+    if (answer === "yes") return this.saveRepayment(session, payment);
+    if (answer === "no") {
+      this.toIdle(session);
+      return { state: "IDLE", reply: say.entryRejected() };
+    }
+    return { state: "AWAITING_PAYMENT_CONFIRM", reply: say.notUnderstoodYesNo() };
+  }
+
+  /** "Kya yeh Gupta ji wale hi hain?" A yes puts the QR payment in their khaata, and the cash isn't recorded. */
+  private async onSameMoney(session: Session, payment: PaymentTurn, answer: YesNo): Promise<Step> {
+    const say = linesFor(session.language);
+    const qr = payment.qr!;
+    if (answer === "yes") {
+      const res = await this.deps.reconciler.matchPayment(session.merchantId, qr.paymentId, qr.entryId);
+      this.toIdle(session);
+      return { state: "IDLE", reply: res.line, ...(res.entry ? { entry: res.entry } : {}) };
+    }
+    if (answer === "no") {
+      payment.qr = null;
+      return {
+        state: "AWAITING_PAYMENT_CONFIRM",
+        reply: say.repaymentReadback(repaymentAmounts(payment), payment.heard.needsReview),
+        needsReview: payment.heard.needsReview,
+      };
+    }
+    return { state: "AWAITING_PAYMENT_CONFIRM", reply: say.notUnderstoodYesNo() };
+  }
+
+  /**
+   * "Nahi, 150 diye" or "nahi, Verma ji ne diye" corrects the repayment, and goods taken said with a no
+   * replace it. Anything else said for someone waits in the queue. A new number the model couldn't place is
+   * asked about again. Null when nothing changed.
+   */
+  private async hearPaymentChange(
+    session: Session,
+    text: string,
+    answer: YesNo,
+    payment: PaymentTurn,
+    readBack: number[],
+  ): Promise<Step | null> {
+    const say = linesFor(session.language);
+    const askAgain = (first: Line): Step => ({
+      state: "AWAITING_PAYMENT_CONFIRM",
+      reply: joinLines(first, say.repaymentReadback(repaymentAmounts(payment), payment.heard.needsReview)),
+    });
+    const heard = await this.deps.extractor.hearChange(text, await this.knownNames(session), session.language, {
+      kind: "repayment",
+      customerName: payment.customerName,
+      amountRupees: toRupees(payment.saidPaise),
+    });
+    if (heard.kind === "none") return saysNewNumber(text, readBack) ? askAgain(say.changeUnclear()) : null;
+    if (heard.kind === "unclear") return askAgain(say.changeUnclear());
+
+    const { event } = heard;
+    const fit = event.customerName ? matchName(event.customerName, payment.customerName) : "exact";
+    const sameCustomer = fit === "exact" || fit === "fuzzy";
+    if (event.type === "entry") {
+      const goods = hearEvent({ ...event, customerName: event.customerName ?? payment.customerName }, text);
+      if (goods.kind !== "heard") return askAgain(say.changeUnclear());
+      if (answer === "no") {
+        this.toIdle(session);
+        return this.readBack(session, goods.event);
+      }
+      session.queue.push(goods.event);
+      return askAgain(say.pendingFirst(nameOf(goods.event)));
+    }
+    if (!sameCustomer && answer !== "no") {
+      const another = hearEvent(event, text);
+      if (another.kind === "heard") {
+        session.queue.push(another.event);
+        return askAgain(say.pendingFirst(nameOf(another.event)));
+      }
+    }
+
+    const amountRupees = event.amountRupees ?? (event.full ? null : payment.heard.amountRupees);
+    const redo = hearEvent(
+      {
+        type: "repayment",
+        customerName: sameCustomer ? payment.customerName : event.customerName,
+        amountRupees,
+        full: amountRupees === null,
+      },
+      `${payment.heard.transcript} / ${text}`,
+    );
+    if (redo.kind !== "heard" || redo.event.kind !== "repayment") return askAgain(say.changeUnclear());
+    if (sameCustomer) {
+      const customer = await getCustomer(this.deps.db, session.merchantId, payment.customerId);
+      return this.readBackRepayment(session, redo.event, customer, true);
+    }
+    const [best] = await matchCustomers(this.deps.db, session.merchantId, redo.event.customerName);
+    if (best?.match === "maybe") {
+      this.toIdle(session);
+      return this.readBack(session, redo.event);
+    }
+    return this.readBackRepayment(session, redo.event, best?.customer ?? null, true);
+  }
+
+  private async saveRepayment(session: Session, payment: PaymentTurn): Promise<Step> {
+    const say = linesFor(session.language);
+    const settled = await settleCash(this.deps.db, session.merchantId, payment.customerId, payment.amountPaise, payment.heard.transcript);
+    for (const entry of settled.entries) {
+      this.deps.events.publish(session.merchantId, { type: "entry.updated", entry: toEntryDto(entry) });
+    }
     this.toIdle(session);
-    return this.readBack(session, { extraction: result.extraction, needsReview: result.needsReview, transcript: text });
+    const saved = say.repaymentSaved(
+      payment.customerName,
+      toRupees(settled.balancePaise),
+      toRupees(payment.saidPaise - settled.appliedPaise),
+    );
+    const last = settled.entries.at(-1);
+    return {
+      state: "IDLE",
+      reply: settled.expiredLinks > 0 ? joinLines(saved, say.linkStillOut(payment.customerName)) : saved,
+      ...(last ? { entry: toEntryDto(last) } : {}),
+    };
+  }
+
+  // ----------------------------------------------------------------- balance
+
+  /** "Gupta ji ka kitna baaki hai?", or with no name, what the whole shop is owed. */
+  private async answerBalance(session: Session, customerName: string | null): Promise<Step> {
+    const say = linesFor(session.language);
+    if (!customerName) {
+      const shop = await shopBalance(this.deps.db, session.merchantId);
+      return {
+        state: "IDLE",
+        reply: shop.customers > 0 ? say.shopOwed(toRupees(shop.pendingPaise), shop.customers) : say.nobodyOwes(),
+      };
+    }
+    // Nothing changes, so the closest name is answered for, and the answer says whose it is.
+    const [best] = await matchCustomers(this.deps.db, session.merchantId, customerName);
+    if (!best) return { state: "IDLE", reply: say.noSuchCustomer(customerName) };
+    const owed = await customerBalancePaise(this.deps.db, session.merchantId, best.customer.id);
+    return {
+      state: "IDLE",
+      reply: owed > 0 ? say.customerOwes(best.customer.name, toRupees(owed)) : say.nothingOwed(best.customer.name),
+    };
   }
 
   // ----------------------------------------------------------- collect flow
@@ -536,28 +845,36 @@ export class ConversationEngine {
  * always might. Other words might too, except after a yes in Hindi or English, where a changed amount
  * would show up as a number.
  */
-function mightChange(text: string, answer: YesNo, entry: EntryWithCustomer, language: Language): boolean {
-  const readBack = [entry.total_paise, entry.paid_paise, entry.pending_paise].map(toRupees);
-  const numbers = extractNumbers(text);
-  if (numbers.some((n) => !readBack.includes(n))) return true;
-  if (numbers.length) return answer === "unknown";
+function mightChange(text: string, answer: YesNo, readBack: number[], language: Language): boolean {
+  if (saysNewNumber(text, readBack)) return true;
+  if (extractNumbers(text).length) return answer === "unknown";
   if (otherWords(text, language).length === 0) return false;
   return answer !== "yes" || !READS_NUMBER_WORDS.has(language);
+}
+
+function saysNewNumber(text: string, readBack: number[]): boolean {
+  return extractNumbers(text).some((n) => !readBack.includes(n));
 }
 
 function amountsSpoken(e: Extraction, transcript: string): boolean {
   return checkAmountsAgainstTranscript({ total: e.totalRupees, paid: e.paidRupees, pending: e.pendingRupees }, transcript).verified;
 }
 
-/** Customers whose entries were heard but not saved yet. */
+function nameOf(heard: HeardEvent): string {
+  return heard.kind === "entry" ? heard.extraction.customerName : heard.customerName;
+}
+
+/** Customers whose entries or repayments were heard but not saved yet. */
 function unsavedCustomers(session: Session): string[] {
   const current =
     session.state === "AWAITING_ENTRY_CONFIRM"
       ? session.entryCustomer
       : session.state === "AWAITING_CUSTOMER_CHOICE"
-        ? session.choice!.heard.extraction.customerName
-        : null;
-  return [...(current ? [current] : []), ...session.queue.map((h) => h.extraction.customerName)];
+        ? nameOf(session.choice!.heard)
+        : session.state === "AWAITING_PAYMENT_CONFIRM"
+          ? session.payment!.customerName
+          : (session.asking?.customerName ?? null);
+  return [...(current ? [current] : []), ...session.queue.map(nameOf)];
 }
 
 function amountsOf(entry: EntryWithCustomer) {
@@ -566,5 +883,15 @@ function amountsOf(entry: EntryWithCustomer) {
     totalRupees: toRupees(entry.total_paise),
     paidRupees: toRupees(entry.paid_paise),
     pendingRupees: toRupees(entry.pending_paise),
+  };
+}
+
+function repaymentAmounts(p: PaymentTurn): RepaymentAmounts {
+  return {
+    customerName: p.customerName,
+    amountRupees: toRupees(p.amountPaise),
+    owedRupees: toRupees(p.owedPaise),
+    leftRupees: toRupees(p.owedPaise - p.amountPaise),
+    changeRupees: toRupees(p.saidPaise - p.amountPaise),
   };
 }

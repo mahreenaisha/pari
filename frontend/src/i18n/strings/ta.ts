@@ -19,8 +19,11 @@ export const ta: Strings = {
   listen: {
     hints: {
       IDLE: 'யார் என்ன வாங்கினாங்க, எவ்வளவு கொடுத்தாங்க.',
+      AWAITING_NAME: 'யாருடையதுன்னு சொல்லுங்க.',
+      AWAITING_AMOUNT: 'எவ்வளவுன்னு சொல்லுங்க.',
       AWAITING_CUSTOMER_CHOICE: 'ஆமா அல்லது இல்லை?',
       AWAITING_ENTRY_CONFIRM: 'ஆமா, இல்லை, அல்லது எதை மாத்தணும்.',
+      AWAITING_PAYMENT_CONFIRM: 'ஆமா, இல்லை, அல்லது எதை மாத்தணும்.',
       AWAITING_COLLECT_CHOICE: 'ஆமா அல்லது இல்லை?',
       AWAITING_PHONE: 'பத்து digit-ஐயும் சொல்லுங்க.',
       AWAITING_PHONE_CONFIRM: 'ஆமா அல்லது இல்லை?',
@@ -32,6 +35,7 @@ export const ta: Strings = {
     example: '“முருகன் அண்ணா 350 ரூபாய்க்கு சாமான் வாங்கினாரு, 200 UPI-ல கொடுத்தாரு, 150 பாக்கி”',
     sayYes: 'அல்லது வானத்தைத் தொட்டு “ஆமா” சொல்லுங்க',
     sayNumber: 'வானத்தைத் தொட்டு number-ஐ சொல்லுங்க.',
+    sayAnswer: 'வானத்தைத் தொட்டு பதில் சொல்லுங்க.',
     breakdown: (total, paid, pending) => `மொத்தம் ${total} · கொடுத்தது ${paid} · பாக்கி ${pending}`,
     linkOffer: 'SMS-ல Paytm payment link',
     linkOfferTo: (phone) => `${phone}-க்கு SMS-ல Paytm payment link`,
@@ -94,6 +98,7 @@ export const ta: Strings = {
     loadFailed: 'கணக்கை load பண்ண முடியல.',
     closedByLink: 'link-ல முடிஞ்சது',
     closedByQr: 'QR-ல முடிஞ்சது',
+    closedByCash: 'ரொக்கமா முடிஞ்சது',
     paidInFull: 'முழுசா கொடுத்தாச்சு',
     linkSent: 'link அனுப்பியாச்சு',
     paid: (amount) => `${amount} கொடுத்தாங்க`,

@@ -24,6 +24,10 @@ function indicLetters(s: string): number[] {
 
 // No amount is a substring of another, so a dropped amount can't hide inside a longer one.
 const split = { customerName: "Gupta ji", totalRupees: 1350, paidRupees: 275, pendingRupees: 1075 };
+const repaid = { customerName: "Gupta ji", amountRupees: 1350, owedRupees: 2275, leftRupees: 925, changeRupees: 0 };
+const repaidAll = { ...repaid, amountRupees: 2275, leftRupees: 0 };
+// ₹2,600 paid against ₹2,275 owed.
+const overpaid = { ...repaidAll, changeRupees: 325 };
 
 const cases: { key: keyof Lines; note: string; say: (lines: Lines) => Line; keeps: string[] }[] = [
   { key: "entryReadback", note: "", say: (l) => l.entryReadback(split, true), keeps: ["Gupta ji", "1,350", "275", "1,075"] },
@@ -68,6 +72,27 @@ const cases: { key: keyof Lines; note: string; say: (lines: Lines) => Line; keep
   { key: "nextEntry", note: "", say: (l) => l.nextEntry(), keeps: [] },
   { key: "unsaved", note: "", say: (l) => l.unsaved("Gupta ji, Verma ji"), keeps: ["Gupta ji, Verma ji"] },
   { key: "changeUnclear", note: "", say: (l) => l.changeUnclear(), keeps: [] },
+  { key: "askName", note: "", say: (l) => l.askName(), keeps: [] },
+  { key: "askAmount", note: "", say: (l) => l.askAmount("Verma ji"), keeps: ["Verma ji"] },
+  { key: "repaymentReadback", note: "(part)", say: (l) => l.repaymentReadback(repaid, true), keeps: ["Gupta ji", "1,350", "2,275", "925"] },
+  { key: "repaymentReadback", note: "(all)", say: (l) => l.repaymentReadback(repaidAll, false), keeps: ["Gupta ji", "2,275"] },
+  {
+    key: "repaymentReadback",
+    note: "(more than owed)",
+    say: (l) => l.repaymentReadback(overpaid, false),
+    keeps: ["Gupta ji", "2,600", "2,275", "325"],
+  },
+  { key: "repaymentCorrected", note: "", say: (l) => l.repaymentCorrected(repaid, false), keeps: ["Gupta ji", "1,350", "2,275", "925"] },
+  { key: "repaymentSaved", note: "(part)", say: (l) => l.repaymentSaved("Gupta ji", 925, 0), keeps: ["Gupta ji", "925"] },
+  { key: "repaymentSaved", note: "(closed, change)", say: (l) => l.repaymentSaved("Gupta ji", 0, 325), keeps: ["Gupta ji", "325"] },
+  { key: "linkStillOut", note: "", say: (l) => l.linkStillOut("Sunita didi"), keeps: ["Sunita didi"] },
+  { key: "qrSameMoney", note: "", say: (l) => l.qrSameMoney("Ramesh bhai", 250), keeps: ["Ramesh bhai", "250"] },
+  { key: "noSuchCustomer", note: "", say: (l) => l.noSuchCustomer("Mehta ji"), keeps: ["Mehta ji"] },
+  { key: "nothingOwed", note: "", say: (l) => l.nothingOwed("Verma ji"), keeps: ["Verma ji"] },
+  { key: "customerOwes", note: "", say: (l) => l.customerOwes("Gupta ji", 1075), keeps: ["Gupta ji", "1,075"] },
+  { key: "shopOwed", note: "", say: (l) => l.shopOwed(12450, 7), keeps: ["12,450", "7"] },
+  { key: "shopOwed", note: "(one customer)", say: (l) => l.shopOwed(1075, 1), keeps: ["1,075"] },
+  { key: "nobodyOwes", note: "", say: (l) => l.nobodyOwes(), keeps: [] },
 ];
 
 it("tests every line", () => {

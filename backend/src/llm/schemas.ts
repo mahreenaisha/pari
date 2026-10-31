@@ -1,17 +1,39 @@
 import { z } from "zod";
 
 const amount = z.number().nonnegative().nullable();
+const name = z.string().trim().nullable();
 
-/** What the LLM is asked to return. Any amount it did not hear is null. */
-export const RawExtraction = z.object({
-  intent: z.enum(["entry", "other"]),
-  customerName: z.string().trim().nullable(),
+/** Goods taken now, with whatever was paid on the spot. Any amount or name the LLM did not hear is null. */
+export const RawEntry = z.object({
+  type: z.literal("entry"),
+  customerName: name,
   totalRupees: amount,
   paidRupees: amount,
   pendingRupees: amount,
   items: z.array(z.string()).nullable().optional(),
 });
-export type RawExtraction = z.infer<typeof RawExtraction>;
+export type RawEntry = z.infer<typeof RawEntry>;
+
+/** Money paid back against what a customer already owes. `full` is "poora chuka diya". */
+export const RawRepayment = z.object({
+  type: z.literal("repayment"),
+  customerName: name,
+  amountRupees: amount,
+  full: z.boolean().nullable().optional(),
+});
+export type RawRepayment = z.infer<typeof RawRepayment>;
+
+export const RawEvent = z.discriminatedUnion("type", [RawEntry, RawRepayment]);
+export type RawEvent = z.infer<typeof RawEvent>;
+
+/** What the LLM is asked to return: what happened, in the order said, or a question about what's owed. */
+export const RawReply = z.object({
+  // The model sometimes names the event type here ("repayment"), with the events themselves right.
+  intent: z.preprocess((v) => (v === "entry" || v === "repayment" ? "record" : v), z.enum(["record", "balance", "other"])),
+  events: z.array(RawEvent).nullable().optional(),
+  balanceOf: name.optional(),
+});
+export type RawReply = z.infer<typeof RawReply>;
 
 /** What the ledger accepts: whole rupees, and the books must balance. */
 export const Extraction = z
@@ -30,7 +52,7 @@ export type Extraction = z.infer<typeof Extraction>;
  * Fills in the one missing amount when two are known, and treats a lone
  * total or lone pending as pure udhar. Never invents a number otherwise.
  */
-export function completeAmounts(raw: RawExtraction): {
+export function completeAmounts(raw: SaidAmounts): {
   totalRupees: number | null;
   paidRupees: number | null;
   pendingRupees: number | null;
@@ -50,7 +72,7 @@ export function completeAmounts(raw: RawExtraction): {
 }
 
 type Amounts = Pick<Extraction, "totalRupees" | "paidRupees" | "pendingRupees">;
-type SaidAmounts = Pick<RawExtraction, "totalRupees" | "paidRupees" | "pendingRupees">;
+type SaidAmounts = Pick<RawEntry, "totalRupees" | "paidRupees" | "pendingRupees">;
 
 export const hasAmounts = (said: SaidAmounts) =>
   said.totalRupees !== null || said.paidRupees !== null || said.pendingRupees !== null;
@@ -80,13 +102,13 @@ export function toExtraction(
 }
 
 /** An entry heard on its own, with the one missing amount filled in. */
-export const finalizeExtraction = (raw: RawExtraction) => toExtraction(raw.customerName, completeAmounts(raw), raw.items);
+export const finalizeExtraction = (raw: RawEntry) => toExtraction(raw.customerName, completeAmounts(raw), raw.items);
 
 export const EXTRACTION_JSON_SHAPE = `{
-  "intent": "entry" | "other",
-  "customerName": string | null,
-  "totalRupees": number | null,
-  "paidRupees": number | null,
-  "pendingRupees": number | null,
-  "items": string[] | null
-}`;
+  "intent": "record" | "balance" | "other",
+  "events": [event, ...],
+  "balanceOf": string | null
+}
+where each event is one of:
+{ "type": "entry", "customerName": string | null, "totalRupees": number | null, "paidRupees": number | null, "pendingRupees": number | null, "items": string[] | null }
+{ "type": "repayment", "customerName": string | null, "amountRupees": number | null, "full": boolean }`;

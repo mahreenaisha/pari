@@ -19,8 +19,11 @@ export const te: Strings = {
   listen: {
     hints: {
       IDLE: 'ఎవరు ఏమి కొన్నారు, ఎంత ఇచ్చారు.',
+      AWAITING_NAME: 'ఎవరిదో చెప్పండి.',
+      AWAITING_AMOUNT: 'ఎంతో చెప్పండి.',
       AWAITING_CUSTOMER_CHOICE: 'అవునా కాదా?',
       AWAITING_ENTRY_CONFIRM: 'అవును, కాదు, లేదా ఏమి మార్చాలో.',
+      AWAITING_PAYMENT_CONFIRM: 'అవును, కాదు, లేదా ఏమి మార్చాలో.',
       AWAITING_COLLECT_CHOICE: 'అవునా కాదా?',
       AWAITING_PHONE: 'పది అంకెలూ చెప్పండి.',
       AWAITING_PHONE_CONFIRM: 'అవునా కాదా?',
@@ -32,6 +35,7 @@ export const te: Strings = {
     example: '“రవి గారు 350 రూపాయల సామాను తీసుకున్నారు, 200 UPI లో ఇచ్చారు, 150 బాకీ”',
     sayYes: 'లేదా ఆకాశాన్ని తాకి “అవును” అనండి',
     sayNumber: 'ఆకాశాన్ని తాకి number చెప్పండి.',
+    sayAnswer: 'ఆకాశాన్ని తాకి జవాబు చెప్పండి.',
     breakdown: (total, paid, pending) => `మొత్తం ${total} · ఇచ్చింది ${paid} · బాకీ ${pending}`,
     linkOffer: 'SMS ద్వారా Paytm payment link',
     linkOfferTo: (phone) => `${phone} కి SMS ద్వారా Paytm payment link`,
@@ -97,6 +101,7 @@ export const te: Strings = {
     loadFailed: 'ఖాతా load కాలేదు.',
     closedByLink: 'link తో పూర్తయింది',
     closedByQr: 'QR తో పూర్తయింది',
+    closedByCash: 'నగదుతో పూర్తయింది',
     paidInFull: 'పూర్తిగా ఇచ్చారు',
     linkSent: 'link వెళ్ళింది',
     paid: (amount) => `${amount} ఇచ్చారు`,

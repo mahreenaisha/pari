@@ -19,8 +19,11 @@ export const bn: Strings = {
   listen: {
     hints: {
       IDLE: 'কে কী নিলেন, আর কত দিলেন।',
+      AWAITING_NAME: 'কার, সেটা বলুন।',
+      AWAITING_AMOUNT: 'কত টাকা, সেটা বলুন।',
       AWAITING_CUSTOMER_CHOICE: 'হ্যাঁ নাকি না?',
       AWAITING_ENTRY_CONFIRM: 'হ্যাঁ, না, অথবা কী বদলাতে হবে।',
+      AWAITING_PAYMENT_CONFIRM: 'হ্যাঁ, না, অথবা কী বদলাতে হবে।',
       AWAITING_COLLECT_CHOICE: 'হ্যাঁ নাকি না?',
       AWAITING_PHONE: 'দশটা সংখ্যাই বলুন।',
       AWAITING_PHONE_CONFIRM: 'হ্যাঁ নাকি না?',
@@ -32,6 +35,7 @@ export const bn: Strings = {
     example: '“ঘোষবাবু 350 টাকার জিনিস নিলেন, 200 UPI-তে দিলেন, 150 বাকি”',
     sayYes: 'অথবা আকাশ ছুঁয়ে বলুন “হ্যাঁ”',
     sayNumber: 'আকাশ ছুঁয়ে নম্বরটা বলুন।',
+    sayAnswer: 'আকাশ ছুঁয়ে উত্তর দিন।',
     breakdown: (total, paid, pending) => `মোট ${total} · দিয়েছেন ${paid} · বাকি ${pending}`,
     linkOffer: 'SMS-এ Paytm payment link',
     linkOfferTo: (phone) => `${phone}-এ SMS-এ Paytm payment link`,
@@ -97,6 +101,7 @@ export const bn: Strings = {
     loadFailed: 'খাতা আনা গেল না।',
     closedByLink: 'link-এ শোধ',
     closedByQr: 'QR-এ শোধ',
+    closedByCash: 'নগদে শোধ',
     paidInFull: 'পুরো টাকা দিয়েছেন',
     linkSent: 'link পাঠানো হয়েছে',
     paid: (amount) => `${amount} দিয়েছেন`,

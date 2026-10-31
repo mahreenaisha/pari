@@ -157,4 +157,83 @@ export const ta: LineBook = {
   }),
 
   changeUnclear: () => ({ text: "என்ன மாத்தணும்னு புரியல.", speech: "என்ன மாத்தணும்னு புரியல." }),
+
+  askName: () => ({ text: "யார் பேர்ல எழுதணும்?", speech: "யார் பேர்ல எழுதணும்?" }),
+
+  askAmount: (customerName) => ({ text: `${customerName}, எவ்வளவு ரூபாய்?`, speech: `${customerName}, எவ்வளவு ரூபாய்?` }),
+
+  repaymentReadback: (p, needsReview) => {
+    const care = needsReview ? "ஒரு தடவை கவனமா கேளுங்க. " : "";
+    if (p.changeRupees > 0) {
+      const paid = p.amountRupees + p.changeRupees;
+      return {
+        text: `${care}${p.customerName} ₹${r(paid)} கொடுத்தாங்க, ஆனா கடன் ₹${r(p.owedRupees)} தான். கணக்கு முடிஞ்சிடும், ₹${r(p.changeRupees)} திருப்பி கொடுக்கணும். save பண்ணட்டுமா?`,
+        speech: `${care}${p.customerName} ${r(paid)} ரூபாய் கொடுத்தாங்க, ஆனா கடன் ${r(p.owedRupees)} ரூபாய் தான். கணக்கு முடிஞ்சிடும், ${r(p.changeRupees)} ரூபாய் திருப்பி கொடுக்கணும். save பண்ணட்டுமா?`,
+      };
+    }
+    if (p.leftRupees === 0) {
+      return {
+        text: `${care}${p.customerName} கிட்ட இருந்து முழுசா ₹${r(p.amountRupees)} வந்துச்சு. கணக்கு முடிஞ்சிடும். save பண்ணட்டுமா?`,
+        speech: `${care}${p.customerName} கிட்ட இருந்து முழுசா ${r(p.amountRupees)} ரூபாய் வந்துச்சு. கணக்கு முடிஞ்சிடும். save பண்ணட்டுமா?`,
+      };
+    }
+    return {
+      text: `${care}${p.customerName} கிட்ட இருந்து ₹${r(p.amountRupees)} வந்துச்சு. ₹${r(p.owedRupees)} பாக்கி இருந்தது, இனி ₹${r(p.leftRupees)} பாக்கி. save பண்ணட்டுமா?`,
+      speech: `${care}${p.customerName} கிட்ட இருந்து ${r(p.amountRupees)} ரூபாய் வந்துச்சு. ${r(p.owedRupees)} ரூபாய் பாக்கி இருந்தது, இனி ${r(p.leftRupees)} ரூபாய் பாக்கி. save பண்ணட்டுமா?`,
+    };
+  },
+
+  repaymentCorrected: (p, needsReview) => {
+    const base = ta.repaymentReadback(p, needsReview);
+    return { text: `சரி பண்ணிட்டேன். ${base.text}`, speech: `சரி பண்ணிட்டேன். ${base.speech}` };
+  },
+
+  repaymentSaved: (customerName, leftRupees, changeRupees) => {
+    if (leftRupees > 0) {
+      return {
+        text: `save ஆயிடுச்சு. ${customerName}-க்கு இன்னும் ₹${r(leftRupees)} பாக்கி.`,
+        speech: `save ஆயிடுச்சு. ${customerName}-க்கு இன்னும் ${r(leftRupees)} ரூபாய் பாக்கி.`,
+      };
+    }
+    const back = changeRupees > 0;
+    return {
+      text: `save ஆயிடுச்சு. ${customerName} கணக்கு முடிஞ்சது.${back ? ` ₹${r(changeRupees)} திருப்பி கொடுக்க மறக்காதீங்க.` : ""}`,
+      speech: `save ஆயிடுச்சு. ${customerName} கணக்கு முடிஞ்சது.${back ? ` ${r(changeRupees)} ரூபாய் திருப்பி கொடுக்க மறக்காதீங்க.` : ""}`,
+    };
+  },
+
+  linkStillOut: (customerName) => ({
+    text: `${customerName} கிட்ட இனி payment link-ல கட்ட வேண்டாம்னு சொல்லிடுங்க.`,
+    speech: `${customerName} கிட்ட இனி payment link-ல கட்ட வேண்டாம்னு சொல்லிடுங்க.`,
+  }),
+
+  qrSameMoney: (customerName, amountRupees) => ({
+    text: `QR-ல ₹${r(amountRupees)} வந்திருக்கு, இன்னும் எந்த கணக்குலயும் சேர்க்கல. இது ${customerName} கொடுத்ததா?`,
+    speech: `QR-ல ${r(amountRupees)} ரூபாய் வந்திருக்கு, இன்னும் எந்த கணக்குலயும் சேர்க்கல. இது ${customerName} கொடுத்ததா?`,
+  }),
+
+  noSuchCustomer: (customerName) => ({
+    text: `${customerName} பேர்ல கணக்கு இல்ல.`,
+    speech: `${customerName} பேர்ல கணக்கு இல்ல.`,
+  }),
+
+  nothingOwed: (customerName) => ({
+    text: `${customerName}-க்கு பாக்கி எதுவும் இல்ல.`,
+    speech: `${customerName}-க்கு பாக்கி எதுவும் இல்ல.`,
+  }),
+
+  customerOwes: (customerName, pendingRupees) => ({
+    text: `${customerName}-க்கு ₹${r(pendingRupees)} பாக்கி.`,
+    speech: `${customerName}-க்கு ${r(pendingRupees)} ரூபாய் பாக்கி.`,
+  }),
+
+  shopOwed: (pendingRupees, customers) => {
+    const where = customers === 1 ? "ஒரே கணக்குல" : `${customers} கணக்குல`;
+    return {
+      text: `மொத்தம் ₹${r(pendingRupees)} பாக்கி, ${where}.`,
+      speech: `மொத்தம் ${r(pendingRupees)} ரூபாய் பாக்கி, ${where}.`,
+    };
+  },
+
+  nobodyOwes: () => ({ text: "இப்போ யாருக்கும் பாக்கி இல்ல.", speech: "இப்போ யாருக்கும் பாக்கி இல்ல." }),
 };

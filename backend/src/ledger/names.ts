@@ -1,6 +1,7 @@
 const HONORIFICS = new Set([
   "ji", "jee", "bhai", "bhaiya", "bhaiyya", "bhaisahab", "sahab", "saab", "saheb", "didi", "behen", "behenji",
   "aunty", "auntie", "uncle", "sir", "madam", "mr", "mrs", "ms", "shri", "shrimati", "seth", "sethji", "babu",
+  "anna", "akka", "amma", "garu", "da", "di", "dada", "tai", "bhau", "kaka", "mama", "chechi", "chettan", "paaji", "ben",
   "जी", "भाई", "भैया", "साहब", "दीदी", "बहन", "आंटी", "अंकल", "सेठ",
 ]);
 

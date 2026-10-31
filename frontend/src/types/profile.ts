@@ -1,3 +1,5 @@
+import type { Language } from '@/i18n/languages';
+
 export type Profile = {
   id: string;
   /** Shop name customers see under the QR code. */
@@ -6,4 +8,6 @@ export type Profile = {
   paymentAddress: string | null;
   /** Exact string encoded into the QR code. */
   qrPayload: string;
+  /** The language Pari hears and speaks, and the app is shown in. null until the merchant picks one. */
+  language: Language | null;
 };

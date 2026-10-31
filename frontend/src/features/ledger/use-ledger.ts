@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import type { Strings } from '@/i18n/strings';
 import { formatDayLabel } from '@/lib/format';
 import { fetchLedgerEntries } from '@/services/ledger-service';
 import type { LedgerEntry, LedgerSummary } from '@/types/ledger';
@@ -53,7 +54,7 @@ export function lastActivity(entry: LedgerEntry) {
 }
 
 /** Most recently active first, grouped under "Today", "Yesterday", or the date. */
-export function groupByDay(entries: LedgerEntry[], filter: LedgerFilter): LedgerSection[] {
+export function groupByDay(entries: LedgerEntry[], filter: LedgerFilter, strings: Strings): LedgerSection[] {
   const sorted = entries
     .filter((entry) => filter === 'all' || entry.status === filter)
     .map((entry) => ({ entry, at: lastActivity(entry) }))
@@ -61,7 +62,7 @@ export function groupByDay(entries: LedgerEntry[], filter: LedgerFilter): Ledger
 
   const sections: LedgerSection[] = [];
   for (const { entry, at } of sorted) {
-    const title = formatDayLabel(at);
+    const title = formatDayLabel(at, strings);
     const current = sections.at(-1);
     if (current?.title === title) current.data.push(entry);
     else sections.push({ title, data: [entry] });

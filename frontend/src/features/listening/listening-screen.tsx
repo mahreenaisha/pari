@@ -15,25 +15,17 @@ import { SkyOrb } from '@/components/sky/sky-orb';
 import { AppText } from '@/components/ui/app-text';
 import type { IconName } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/pill-button';
+import { LanguageChip } from '@/features/language/language-chip';
+import type { Notice, Strings } from '@/i18n/strings';
+import { useStrings } from '@/i18n/use-strings';
 import { formatMoney, formatPhone } from '@/lib/format';
 import { useContentWidth } from '@/lib/use-content-width';
-import type { ConversationState } from '@/types/api';
 import type { LedgerEntry, PaymentLink } from '@/types/ledger';
 import { colors, screenPadding, spacing, springs } from '@/theme';
 
 import type { Turn } from './conversation-store';
-import { useVoiceAssistant, type Notice } from './use-voice-assistant';
+import { useVoiceAssistant } from './use-voice-assistant';
 
-const LISTEN_HINT: Record<ConversationState, string> = {
-  IDLE: 'Who bought what, and how much they paid.',
-  AWAITING_ENTRY_CONFIRM: 'Haan, nahi, or what to change.',
-  AWAITING_COLLECT_CHOICE: 'Haan ya nahi?',
-  AWAITING_PHONE: 'Say the ten digits.',
-  AWAITING_PHONE_CONFIRM: 'Haan ya nahi?',
-  AWAITING_QR_MATCH: 'Haan ya nahi?',
-};
-
-const VOICE_ANSWER = 'Or tap the sky and say “haan”';
 /** Longer lines get a smaller headline so they still fit. */
 const LONG_LINE = 64;
 
@@ -58,37 +50,32 @@ type Scene = {
   footnote?: string;
 };
 
-/** "…150 baaki. Save karoon?" puts the question on its own line. */
+/** "…150 baaki. Save karoon?" puts the question on its own line, after a full stop or a danda (।). */
 function breakBeforeQuestion(text: string) {
-  return text.replace(/\. (?=[^.]*\?( \([^)]*\))?$)/, '.\n');
+  return text.replace(/([.।]) (?=[^.।]*\?( \([^)]*\))?$)/, '$1\n');
 }
 
-function breakdown(entry: LedgerEntry) {
-  return `Total ${formatMoney(entry.total)} · Paid ${formatMoney(entry.paid)} · Baaki ${formatMoney(entry.pending)}`;
+function breakdown(entry: LedgerEntry, { listen }: Strings) {
+  return listen.breakdown(formatMoney(entry.total), formatMoney(entry.paid), formatMoney(entry.pending));
 }
 
-function linkOffer(entry?: LedgerEntry) {
+function linkOffer(entry: LedgerEntry | undefined, { listen }: Strings) {
   const phone = entry?.customer.phone;
-  return phone ? `Paytm payment link by SMS to ${formatPhone(phone)}` : 'Paytm payment link by SMS';
+  return phone ? listen.linkOfferTo(formatPhone(phone)) : listen.linkOffer;
 }
 
-function linkSent(link: PaymentLink) {
-  return `Sent to ${formatPhone(link.phone)}. The entry closes itself once it’s paid.`;
+function linkSent(link: PaymentLink, { listen }: Strings) {
+  return listen.linkSent(formatPhone(link.phone));
 }
 
-const viewLedger: Action = {
-  label: 'View in ledger',
-  icon: 'ledgerFilled',
-  onPress: () => router.navigate('/ledger'),
-};
+function viewLedger({ listen }: Strings): Action {
+  return { label: listen.viewLedger, icon: 'ledgerFilled', onPress: () => router.navigate('/ledger') };
+}
 
-function turnScene(turn: Turn, answer: (text: 'haan' | 'nahi') => void): Scene {
+function turnScene(turn: Turn, answer: (text: 'haan' | 'nahi') => void, strings: Strings): Scene {
+  const { listen, common } = strings;
   if (!turn.reply) {
-    return {
-      key: 'start',
-      headline: 'Tap the sky and speak',
-      body: '“Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki”',
-    };
+    return { key: 'start', headline: listen.start, body: listen.example };
   }
 
   const yes = (label: string, icon: IconName = 'check'): Action => ({
@@ -108,34 +95,34 @@ function turnScene(turn: Turn, answer: (text: 'haan' | 'nahi') => void): Scene {
     case 'AWAITING_ENTRY_CONFIRM':
       return {
         ...said,
-        note: turn.entry && breakdown(turn.entry),
+        note: turn.entry && breakdown(turn.entry, strings),
         flagged: turn.needsReview,
-        actions: [yes('Haan, save karo'), no('Nahi')],
-        footnote: VOICE_ANSWER,
+        actions: [yes(listen.save), no(common.no)],
+        footnote: listen.sayYes,
       };
     case 'AWAITING_COLLECT_CHOICE':
       return {
         ...said,
-        note: linkOffer(turn.entry),
-        actions: [yes('Link bhejo', 'link'), no('Abhi nahi')],
-        footnote: VOICE_ANSWER,
+        note: linkOffer(turn.entry, strings),
+        actions: [yes(listen.sendLink, 'link'), no(listen.notNow)],
+        footnote: listen.sayYes,
       };
     case 'AWAITING_PHONE':
-      return { ...said, actions: [no('Rehne do')], footnote: 'Tap the sky and say the number.' };
+      return { ...said, actions: [no(listen.skip)], footnote: listen.sayNumber };
     case 'AWAITING_PHONE_CONFIRM':
-      return { ...said, actions: [yes('Haan'), no('Nahi')], footnote: VOICE_ANSWER };
+      return { ...said, actions: [yes(common.yes), no(common.no)], footnote: listen.sayYes };
     case 'AWAITING_QR_MATCH':
       return {
         ...said,
-        note: 'Paid to your shop QR',
-        actions: [yes('Haan'), no('Nahi')],
-        footnote: VOICE_ANSWER,
+        note: listen.paidToQr,
+        actions: [yes(common.yes), no(common.no)],
+        footnote: listen.sayYes,
       };
     case 'IDLE':
       return {
         ...said,
-        note: turn.link?.status === 'sent' ? linkSent(turn.link) : undefined,
-        actions: turn.entry && turn.entry.status !== 'rejected' ? [viewLedger] : undefined,
+        note: turn.link?.status === 'sent' ? linkSent(turn.link, strings) : undefined,
+        actions: turn.entry && turn.entry.status !== 'rejected' ? [viewLedger(strings)] : undefined,
       };
   }
 }
@@ -152,6 +139,7 @@ export function ListeningScreen() {
   const tabBarInset = useTabBarInset();
   const width = useContentWidth();
   const { height } = useWindowDimensions();
+  const strings = useStrings();
   const { turn, phase, notice, level, energy, tapOrb, answer } = useVoiceAssistant();
 
   const orbSize = Math.round(Math.min(width * 0.72, height * 0.32, 340));
@@ -169,11 +157,11 @@ export function ListeningScreen() {
   const waiting = turn.state !== 'IDLE';
   const scene: Scene =
     phase === 'recording'
-      ? { key: 'recording', headline: 'Sun rahi hoon…', body: LISTEN_HINT[turn.state] }
+      ? { key: 'recording', headline: strings.listen.listening, body: strings.listen.hints[turn.state] }
       : phase === 'transcribing'
-        ? { key: 'transcribing', headline: 'Soch rahi hoon…' }
+        ? { key: 'transcribing', headline: strings.listen.thinking }
         : withNotice(
-            turnScene(turn, (text) => void answer(text)),
+            turnScene(turn, (text) => void answer(text), strings),
             notice,
             waiting,
           );
@@ -181,9 +169,12 @@ export function ListeningScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + spacing.sm, paddingBottom: tabBarInset }]}>
-      <AppText variant="headline" align="center" color={colors.textSecondary} style={styles.wordmark}>
-        pyari pari
-      </AppText>
+      <View style={styles.top}>
+        <AppText variant="headline" align="center" color={colors.textSecondary} style={styles.wordmark}>
+          pyari pari
+        </AppText>
+        <LanguageChip style={styles.chip} />
+      </View>
 
       <View style={styles.stage}>
         <Pressable
@@ -193,7 +184,11 @@ export function ListeningScreen() {
           disabled={busy}
           role="button"
           accessibilityLabel={
-            phase === 'recording' ? 'Stop listening' : waiting ? 'Answer by voice' : 'Speak an entry'
+            phase === 'recording'
+              ? strings.listen.stopListening
+              : waiting
+                ? strings.listen.answerByVoice
+                : strings.listen.speakEntry
           }>
           <Animated.View style={pressStyle}>
             <SkyOrb size={orbSize} energy={energy} level={level} glow={0.1} ripples />
@@ -222,7 +217,7 @@ function SceneView({ scene, disabled }: { scene: Scene; disabled: boolean }) {
         <AppText
           variant="body"
           align="center"
-          numberOfLines={2}
+          numberOfLines={3}
           color={scene.alert ? colors.text : colors.textSecondary}>
           {scene.body}
         </AppText>
@@ -261,9 +256,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: screenPadding,
   },
+  top: {
+    justifyContent: 'center',
+  },
   wordmark: {
     fontSize: 22,
     lineHeight: 28,
+  },
+  chip: {
+    position: 'absolute',
+    right: 0,
   },
   stage: {
     flex: 1,

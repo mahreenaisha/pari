@@ -18,7 +18,7 @@ export function converseRoutes(ctx: AppContext): Router {
     let sttMs: number | undefined;
     let t = performance.now();
     if (audio) {
-      const result = await ctx.stt.transcribe(audio);
+      const result = await ctx.stt.transcribe(audio, { language: await ctx.languages.get(mid) });
       sttMs = Math.round(performance.now() - t);
       transcript = result.transcript;
       text = result.transcript;
@@ -45,7 +45,7 @@ export function converseRoutes(ctx: AppContext): Router {
     body.timings = { thinkMs, ...(sttMs !== undefined ? { sttMs } : {}) };
     if (speak) {
       t = performance.now();
-      body.replyAudio = (await ctx.tts.synthesize(turn.reply.speech)).toString("base64");
+      body.replyAudio = (await ctx.tts.synthesize(turn.reply.speech, turn.reply.language)).toString("base64");
       body.timings.ttsMs = Math.round(performance.now() - t);
     }
     res.json(body);

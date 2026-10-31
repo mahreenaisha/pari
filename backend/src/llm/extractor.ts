@@ -1,4 +1,6 @@
+import type { Language } from "../contracts/index.js";
 import { AppError } from "../helpers/errors.js";
+import { DEFAULT_LANGUAGE, LANGUAGE_NAMES } from "../languages.js";
 import { extractJsonObject, type ChatMessage, type ChatModel } from "./chat.js";
 import { checkAmountsAgainstTranscript } from "./numbers.js";
 import { completeAmounts, EXTRACTION_JSON_SHAPE, Extraction, RawExtraction } from "./schemas.js";
@@ -8,18 +10,27 @@ export type ExtractionResult =
   | { kind: "not_entry" }
   | { kind: "unclear"; reason: string };
 
-function systemPrompt(knownCustomers: string[]): string {
+function spokenLanguage(language: Language): string {
+  if (language === "hi-IN") return "Input is a speech transcript in Hindi, English or code-mixed Hinglish (Devanagari or Roman).";
+  if (language === "en-IN") return "Input is a speech transcript in Indian English, possibly mixed with Hindi.";
+  return `Input is a speech transcript in ${LANGUAGE_NAMES[language]}, often mixed with English or Hindi words.`;
+}
+
+function systemPrompt(knownCustomers: string[], language: Language): string {
   return [
     "You extract udhar (shop credit) ledger entries for an Indian kirana merchant.",
-    "Input is a speech transcript in Hindi, English or code-mixed Hinglish (Devanagari or Roman).",
+    spokenLanguage(language),
     "Return ONLY a JSON object with this exact shape:",
     EXTRACTION_JSON_SHAPE,
     "Rules:",
     '- intent is "entry" only if the merchant is recording goods/money given to a customer, or money received against it. Otherwise "other".',
-    "- customerName: the customer as the merchant said it, in Roman script, keeping honorifics like ji/bhai/didi (e.g. \"Gupta ji\").",
+    "- customerName: the customer as the merchant said it, in Roman script, keeping honorifics like ji/bhai/didi/anna/garu (e.g. \"Gupta ji\", \"Murugan anna\").",
     "- totalRupees: value of goods taken. paidRupees: amount paid now (cash, UPI, anything). pendingRupees: amount still owed (baaki/udhaar).",
     "- Use only numbers actually spoken. If an amount was not said, use null. Never compute or guess.",
     "- Hindi number words: sau=100, hazaar=1000, dedh=1.5, dhai=2.5, saade=+0.5 (saade teen sau = 350).",
+    language === "hi-IN" || language === "en-IN"
+      ? ""
+      : `- Amounts may also be spoken as ${LANGUAGE_NAMES[language]} number words; convert those to numbers.`,
     "- items: goods mentioned (e.g. [\"aata\", \"cheeni\"]) or null.",
     knownCustomers.length
       ? `- Known customers: ${knownCustomers.join(", ")}. If the spoken name is one of these (even with a different spelling or script), return it exactly as listed.`
@@ -43,9 +54,9 @@ function finalize(raw: RawExtraction): { ok: true; value: Extraction } | { ok: f
 export class EntryExtractor {
   constructor(private readonly chat: ChatModel) {}
 
-  async extract(transcript: string, knownCustomers: string[] = []): Promise<ExtractionResult> {
+  async extract(transcript: string, knownCustomers: string[] = [], language: Language = DEFAULT_LANGUAGE): Promise<ExtractionResult> {
     const messages: ChatMessage[] = [
-      { role: "system", content: systemPrompt(knownCustomers) },
+      { role: "system", content: systemPrompt(knownCustomers, language) },
       { role: "user", content: transcript },
     ];
 

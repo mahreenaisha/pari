@@ -5,25 +5,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarInset } from '@/components/navigation/tab-bar-inset';
 import { AppText } from '@/components/ui/app-text';
 import { PillButton } from '@/components/ui/pill-button';
+import { useStrings } from '@/i18n/use-strings';
 import { colors, radii, screenPadding, spacing } from '@/theme';
 
 import { LedgerHeader } from './ledger-header';
 import { LedgerRow } from './ledger-row';
 import { groupByDay, summarize, useLedgerEntries, type LedgerFilter } from './use-ledger';
 
-const EMPTY_COPY: Record<LedgerFilter, string> = {
-  all: 'No entries yet. Speak one on the Listen tab and it shows up here once you confirm it.',
-  open: 'Nothing to collect. Every entry is closed.',
-  closed: 'No closed entries yet.',
-};
-
 export function LedgerScreen() {
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
+  const strings = useStrings();
   const [filter, setFilter] = useState<LedgerFilter>('all');
   const { data, isPending, isError, isRefetching, refetch } = useLedgerEntries();
 
-  const sections = data ? groupByDay(data, filter) : [];
+  const sections = data ? groupByDay(data, filter, strings) : [];
   const summary = data ? summarize(data) : undefined;
 
   return (
@@ -48,14 +44,14 @@ export function LedgerScreen() {
           ) : isError ? (
             <View style={styles.message}>
               <AppText variant="body" align="center" color={colors.textSecondary}>
-                Couldn’t load your ledger.
+                {strings.ledger.loadFailed}
               </AppText>
-              <PillButton label="Try again" onPress={() => void refetch()} />
+              <PillButton label={strings.common.tryAgain} onPress={() => void refetch()} />
             </View>
           ) : (
             <View style={styles.message}>
               <AppText variant="body" align="center" color={colors.textSecondary}>
-                {EMPTY_COPY[filter]}
+                {strings.ledger.empty[filter]}
               </AppText>
             </View>
           )

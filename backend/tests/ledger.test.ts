@@ -58,6 +58,15 @@ describe("customers", () => {
     expect(c.match).toBe("new");
     expect(c.customer.name).toBe("Mehta bhai");
   });
+
+  it("knows honorifics from other languages", async () => {
+    const a = await findOrCreateCustomer(t.ctx.db, t.merchantId, "Murugan anna");
+    const b = await findOrCreateCustomer(t.ctx.db, t.merchantId, "Murugan");
+    const c = await findOrCreateCustomer(t.ctx.db, t.merchantId, "Ravi garu");
+    const d = await findOrCreateCustomer(t.ctx.db, t.merchantId, "Ravi");
+    expect(b.customer.id).toBe(a.customer.id);
+    expect(d.customer.id).toBe(c.customer.id);
+  });
 });
 
 describe("entries", () => {

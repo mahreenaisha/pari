@@ -15,7 +15,7 @@
 In India's retail ecosystem, hundreds of millions of daily transactions across *kirana* (mom-and-pop grocery) stores operate on **udhar** (informal shop credit). Merchants traditionally track this on paper (*bahi-khata*) or via accounting apps that demand tedious manual typing while serving a crowded counter.
 
 **Pari** is an ambient, voice-first intelligent ledger that bridges vernacular speech and digital commerce:
-1. **Speak Naturally**: The merchant speaks in code-mixed Hindi/Hinglish (e.g., *"Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki"*).
+1. **Speak Naturally**: The merchant picks one of 11 Indian languages once, then speaks it the way shops do, mixed with English (e.g., in Hindi, *"Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki"*).
 2. **Deterministic Extraction & Read-Back**: Pari extracts the entities, enforces strict accounting invariants, and verifies the numbers against the spoken audio before reading back a confirmation prompt.
 3. **Automated Paytm Collection**: Once confirmed, Pari dispatches an SMS payment link via Paytm for the pending amount.
 4. **Intelligent Reconciliation**: The ledger automatically settles when the customer pays the link, or proactively alerts the merchant when a matching payment hits the shop's physical QR counter (*"₹150 aaya, Gupta ji ka?"*).
@@ -39,15 +39,15 @@ flowchart TD
     end
 
     subgraph AIEngine["Voice & Generative AI Pipeline (Sarvam AI Cloud)"]
-        STT["Speech-to-Text<br/>(saaras:v4, codemix hi-IN)"]
+        STT["Speech-to-Text<br/>(saaras:v4, codemix, merchant's language)"]
         LLM["LLM Extraction<br/>(sarvam-105b-conversations)"]
-        TTS["Text-to-Speech<br/>(bulbul:v4-flash, cached streaming)"]
+        TTS["Text-to-Speech<br/>(Bulbul voice per language, cached streaming)"]
     end
 
     subgraph Guardrails["Deterministic Financial Core"]
-        NumParser["Hindi/Devanagari Number Parser<br/>(Words, fractions, multipliers)"]
+        NumParser["Number Parser<br/>(Hindi words and fractions, digits in any Indian script)"]
         InvariantCheck["Accounting Invariant Engine<br/>(Total = Paid + Pending)"]
-        Templates["Deterministic Readback Templates<br/>(No hallucinated speech)"]
+        Templates["Line Tables, One per Language<br/>(No hallucinated speech)"]
     end
 
     subgraph LedgerReconciliation["Ledger & Settlement Engine"]
@@ -91,15 +91,15 @@ flowchart TD
 
 ### A. The Voice & LLM Stack (Sarvam AI)
 * **Speech-to-Text (`saaras:v4`)**:
-  * Optimized for Indian English and Hindi code-mixed speech (`codemix` mode, `hi-IN`).
+  * Runs in `codemix` mode and is told the merchant's language (e.g. `ta-IN`), because one-word answers like *"haan"* are too short to detect a language from.
   * Injected with custom acoustic keyterms (e.g., `"Pari"`, customer names) to prevent phonetic misrecognition.
 * **Large Language Model (`sarvam-105b-conversations`)**:
   * A **105-billion parameter Mixture-of-Experts (MoE)** foundation model hosted on Sarvam Cloud.
   * Configured with temperature `0.1`, JSON object schema enforcement, and optional reasoning effort control.
-  * Specializes in Indian dialectal nuances, honorifics (*ji*, *bhai*, *didi*), and colloquial phrasing.
-* **Text-to-Speech (`bulbul:v4-flash`)**:
-  * Expressive conversational voice (`simran_enhi_customer`) operating at `1.15x` pace.
-  * Features a **two-tier optimization**: in-memory LRU caching of pre-synthesized audio for recurring phrases (*"Save ho gaya"*, *"Haan ji, boliye"*) and chunked HTTP streaming for sub-500ms time-to-first-audio.
+  * Specializes in Indian dialectal nuances, honorifics (*ji*, *bhai*, *didi*, *anna*, *garu*), and colloquial phrasing.
+* **Text-to-Speech (Bulbul)**:
+  * One female voice per language (see [Eleven Languages](#c-eleven-languages)), operating at `1.15x` pace.
+  * Features a **two-tier optimization**: in-memory LRU caching of pre-synthesized audio for recurring phrases (*"Save ho gaya"*, *"Theek hai, number dobara boliye"*), kept apart per language, and chunked HTTP streaming for sub-500ms time-to-first-audio.
 
 ### B. Zero-Hallucination Deterministic Financial Core
 Financial records cannot rely on unconstrained generative output. Pari enforces strict separation between **entity extraction** and **financial execution**:
@@ -120,12 +120,32 @@ Financial records cannot rely on unconstrained generative output. Pari enforces 
      * *sau* ($100$), *hazaar* ($1,000$), *lakh* ($100,000$).
      * *dedh* ($1.5$), *dhai* ($2.5$), *saade* ($+0.5$), *sava* ($+0.25$), *paune* ($-0.25$).
      * e.g., *"saade teen sau"* $\rightarrow 350$, *"dedh sau"* $\rightarrow 150$.
-   * Parses spoken 10-digit Indian mobile numbers (Devanagari, Romanized Hindi, digit words, and repeats like *"double nine"*).
+   * Parses spoken 10-digit Indian mobile numbers (digits in any Indian script, Devanagari and Romanized Hindi or English digit words, and repeats like *"double nine"*).
 3. **Formal Accounting Invariants**:
    * Recomputes single missing fields ($Total = Paid + Pending$).
    * Formally verifies with [`checkAmountsAgainstTranscript`](backend/src/llm/numbers.ts) that every non-zero amount was explicitly uttered or directly derived. Flags unverified amounts with `needsReview: true`.
-4. **Deterministic Spoken Outputs (`readback.ts`)**:
-   * LLMs never construct the response audio text. Read-back lines are generated programmatically: Roman Hinglish for terminal/screen displays and Devanagari Hindi for Bulbul TTS.
+4. **Deterministic Spoken Outputs ([`lines/`](backend/src/llm/lines))**:
+   * LLMs never construct the response audio text. Every line comes from the merchant's language table, with amounts, names and phone numbers filled in by code: a `text` for screens and a `speech` for Bulbul. Hindi shows Roman Hinglish and speaks Devanagari; the other languages use their own script for both, with the speech saying that language's word for rupees where the screen shows ₹.
+
+### C. Eleven Languages
+Pari works fully in the 11 languages Bulbul can speak: Hindi, English, Bengali, Tamil, Telugu, Kannada, Malayalam, Marathi, Gujarati, Punjabi and Odia. The app asks for the language on first launch and saves it with `PATCH /api/me`; a chip on the Listen screen changes it later. Until one is picked, Pari uses Hindi.
+
+* **Hearing**: Saaras is told the merchant's language. Each language has its own yes and no words, and Hindi and English ones count in all of them, so the app's buttons always send *"haan"* or *"nahi"*. Digits in any Indian script become 0–9, but number *words* are only parsed in Hindi and English, so the other languages rely on Saaras writing amounts as digits.
+* **Text**: Pari's lines live in [`backend/src/llm/lines/`](backend/src/llm/lines) and the app's text in [`frontend/src/i18n/strings/`](frontend/src/i18n/strings), one typed table per language, so a missing line fails the typecheck.
+* **Voices** ([`backend/src/tts/voices.ts`](backend/src/tts/voices.ts)) are all female, so Pari sounds like one person. Bulbul v4 has no Malayalam or Odia voice and no female Tamil or clearly female Punjabi one, so those four use v3's general voice:
+
+| Language | Model | Speaker |
+| :--- | :--- | :--- |
+| Hindi | `bulbul:v4-flash` | `simran_enhi_customer` |
+| English | `bulbul:v4-flash` | `simran_en_customer` |
+| Bengali | `bulbul:v4-flash` | `roopa_bn_conversational` |
+| Telugu | `bulbul:v4-flash` | `kavitha_te_conversation` |
+| Kannada | `bulbul:v4-flash` | `chaitra_kn_conversation` |
+| Marathi | `bulbul:v4-flash` | `ishita_mr_conversational` |
+| Gujarati | `bulbul:v4-flash` | `pooja_gu_customer` |
+| Tamil, Malayalam, Odia, Punjabi | `bulbul:v3` | `simran` |
+
+> **Before showing a language**, have a native speaker read its line table and app strings. The Hindi wording is the original; the other tables are new and haven't been reviewed by native speakers yet.
 
 ---
 
@@ -230,7 +250,8 @@ All `/api` endpoints (except the signature-verified Paytm webhook) require the `
 | `POST` | `/api/converse/reset` | Resets active conversation to `IDLE`. |
 | `GET` | `/api/events` | Server-Sent Events (SSE) stream for real-time notifications (`entry.updated`, `payment.received`, `pari.prompt`, `pari.announce`). |
 | `POST` | `/api/voice/entry` | Stateless single-shot audio/text entry extraction and readback. |
-| `GET` | `/api/me` | The shop's name, UPI ID and QR payload (`upi://pay?...` when `PARI_UPI_ID` is set). |
+| `GET` | `/api/me` | The shop's name, UPI ID, QR payload (`upi://pay?...` when `PARI_UPI_ID` is set) and Pari's language (`null` until picked). |
+| `PATCH` | `/api/me` | Sets Pari's language: `{ "language": "ta-IN" }`, one of the 11 codes. |
 | `GET` | `/api/entries` | Lists ledger entries with optional status and customer filters, each with its latest payment link and matched payments. |
 | `PATCH` | `/api/entries/:id` | Corrects an entry's amounts or customer name. |
 | `POST` | `/api/entries/:id/confirm` | Confirms (`"yes"`) or rejects (`"no"`) an entry via JSON or audio. |
@@ -238,7 +259,7 @@ All `/api` endpoints (except the signature-verified Paytm webhook) require the `
 | `GET` | `/api/customers/:id/balance` | Returns aggregate pending balance and list of open entries. |
 | `GET` | `/api/payments/suggestions` | Retrieves outstanding QR payments awaiting confirmation. |
 | `POST` | `/api/payments/:id/match` | Matches or rejects a suggested payment against an entry, and drops Pari's spoken question about it. |
-| `GET` | `/api/tts/stream?text=` | Low-latency audio streaming of Bulbul WAV synthesis. |
+| `GET` | `/api/tts/stream?text=&language=` | Low-latency audio streaming of Bulbul WAV synthesis, in that language's voice (the merchant's by default). |
 | `POST` | `/api/paytm/callback` | Paytm status callback (checksum verified, public webhook). |
 | `GET` | `/health` | Healthcheck reporting database status, Paytm mode, and Sarvam connectivity. |
 
@@ -299,7 +320,7 @@ npm run pari
 
 ### Testing & Verification
 ```bash
-# Run unit, integration, and E2E mock suites (90+ tests without network dependency)
+# Run unit, integration, and E2E mock suites (about 460 tests without network dependency)
 npm test
 
 # Type-check TypeScript sources
@@ -328,10 +349,13 @@ npx expo run:android                                 # or --variant release for 
 ```
 
 * Sarvam needs internet, so keep a phone hotspot as a backup. Check the Sarvam credits beforehand; the backend returns 402 when they run out.
-* For a fresh start, stop the backend and delete `backend/.data/pglite`. Pari only asks for a customer's number until it has one.
+* For a fresh start, stop the backend and delete `backend/.data/pglite`. Pari only asks for a customer's number until it has one, and the app asks for the language again.
 
 ### Demo script (about 3 minutes)
 
+The script is in Hindi. In another language, Pari's lines are in that language, and the Listen screen shows an example sentence to say.
+
+0. **Pick the language.** On first launch the app asks for Pari's language; tap हिन्दी.
 1. **Speak.** Tap the sky and say *"Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki."*
 2. **Extract and confirm.** The breakdown shows ₹350, ₹200 and ₹150, and Pari says *"Gupta ji, total ₹350, ₹200 mile, ₹150 baaki. Save karoon?"* Answer "Haan".
 3. **Collect.** Pari: *"Save ho gaya. ₹150 ka payment link bhejun?"* Answer "Haan", give the number (*"98765 43210"*), and answer "Haan" to *"98765 43210. Sahi hai?"* Pari: *"Link bhej diya…"* (the mock Paytm logs the SMS).

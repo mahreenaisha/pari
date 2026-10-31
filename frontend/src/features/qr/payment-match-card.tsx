@@ -5,17 +5,19 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { AppText } from '@/components/ui/app-text';
 import { Icon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/pill-button';
+import type { Strings } from '@/i18n/strings';
+import { useStrings } from '@/i18n/use-strings';
 import { formatMoney, formatTime } from '@/lib/format';
 import type { QrPayment } from '@/types/payments';
 import { colors, radii, spacing } from '@/theme';
 
 import { useResolveQrPayment } from './use-qr-payments';
 
-function settles(amount: number, pending: number) {
+function settles(amount: number, pending: number, { qr }: Strings) {
   const left = pending - amount;
-  if (left > 0) return `${formatMoney(left)} of their ${formatMoney(pending)} stays baaki`;
-  if (left < 0) return `Clears their ${formatMoney(pending)} baaki, with ${formatMoney(-left)} extra`;
-  return `Clears their ${formatMoney(pending)} baaki`;
+  if (left > 0) return qr.staysPending(formatMoney(left), formatMoney(pending));
+  if (left < 0) return qr.clearsWithExtra(formatMoney(pending), formatMoney(-left));
+  return qr.clears(formatMoney(pending));
 }
 
 type PaymentMatchCardProps = {
@@ -29,6 +31,7 @@ type PaymentMatchCardProps = {
  * moves to the next suggestion until none are left.
  */
 export function PaymentMatchCard({ payment, waiting }: PaymentMatchCardProps) {
+  const strings = useStrings();
   const [index, setIndex] = useState(0);
   const resolve = useResolveQrPayment();
   const suggestion = payment.suggestions.at(index);
@@ -36,8 +39,11 @@ export function PaymentMatchCard({ payment, waiting }: PaymentMatchCardProps) {
 
   const dismiss = () => resolve.mutate({ paymentId: payment.id });
 
-  const via = payment.source === 'link' ? 'More than the link asked' : 'On your QR';
-  const meta = [`${via} · ${formatTime(payment.receivedAt)}`, waiting > 0 ? `${waiting} more waiting` : null]
+  const via = payment.source === 'link' ? strings.qr.overLink : strings.qr.onQr;
+  const meta = [
+    `${via} · ${formatTime(payment.receivedAt, strings.locale)}`,
+    waiting > 0 ? strings.qr.waiting(waiting) : null,
+  ]
     .filter(Boolean)
     .join(' · ');
 
@@ -52,10 +58,10 @@ export function PaymentMatchCard({ payment, waiting }: PaymentMatchCardProps) {
 
       <Animated.View key={index} entering={FadeIn.duration(250)} style={styles.question}>
         <AppText variant="headline" style={styles.headline}>
-          {suggestion ? `${amount} aaya, ${suggestion.customerName} ka?` : `${amount} aaya. Kiska hai?`}
+          {suggestion ? strings.qr.ask(amount, suggestion.customerName) : strings.qr.askWhose(amount)}
         </AppText>
         <AppText variant="caption">
-          {suggestion ? settles(payment.amount, suggestion.pending) : 'No open entry matches this payment.'}
+          {suggestion ? settles(payment.amount, suggestion.pending, strings) : strings.qr.noMatch}
         </AppText>
       </Animated.View>
 
@@ -65,20 +71,20 @@ export function PaymentMatchCard({ payment, waiting }: PaymentMatchCardProps) {
             <PillButton
               tone="accent"
               icon="check"
-              label="Haan"
+              label={strings.common.yes}
               disabled={resolve.isPending}
               onPress={() => resolve.mutate({ paymentId: payment.id, entryId: suggestion.entryId })}
               style={styles.action}
             />
             <PillButton
-              label="Nahi"
+              label={strings.common.no}
               disabled={resolve.isPending}
               onPress={() => (index + 1 < payment.suggestions.length ? setIndex(index + 1) : dismiss())}
               style={styles.action}
             />
           </>
         ) : (
-          <PillButton label="Theek hai" disabled={resolve.isPending} onPress={dismiss} style={styles.action} />
+          <PillButton label={strings.qr.okay} disabled={resolve.isPending} onPress={dismiss} style={styles.action} />
         )}
       </View>
     </View>

@@ -1,0 +1,111 @@
+import type { Strings } from './types';
+
+export const ta: Strings = {
+  locale: 'ta-IN',
+
+  common: {
+    yes: 'ஆமா',
+    no: 'இல்லை',
+    tryAgain: 'மறுபடியும் முயற்சி பண்ணுங்க',
+  },
+
+  tabs: {
+    listen: 'பேசுங்க',
+    qr: 'QR',
+    ledger: 'கணக்கு',
+    qrToMatch: (count) => `QR, ${count} payment match பண்ணணும்`,
+  },
+
+  listen: {
+    hints: {
+      IDLE: 'யார் என்ன வாங்கினாங்க, எவ்வளவு கொடுத்தாங்க.',
+      AWAITING_ENTRY_CONFIRM: 'ஆமா, இல்லை, அல்லது எதை மாத்தணும்.',
+      AWAITING_COLLECT_CHOICE: 'ஆமா அல்லது இல்லை?',
+      AWAITING_PHONE: 'பத்து digit-ஐயும் சொல்லுங்க.',
+      AWAITING_PHONE_CONFIRM: 'ஆமா அல்லது இல்லை?',
+      AWAITING_QR_MATCH: 'ஆமா அல்லது இல்லை?',
+    },
+    listening: 'கேட்டுட்டு இருக்கேன்…',
+    thinking: 'யோசிக்கிறேன்…',
+    start: 'வானத்தைத் தொட்டுப் பேசுங்க',
+    example: '“முருகன் அண்ணா 350 ரூபாய்க்கு சாமான் வாங்கினாரு, 200 UPI-ல கொடுத்தாரு, 150 பாக்கி”',
+    sayYes: 'அல்லது வானத்தைத் தொட்டு “ஆமா” சொல்லுங்க',
+    sayNumber: 'வானத்தைத் தொட்டு number-ஐ சொல்லுங்க.',
+    breakdown: (total, paid, pending) => `மொத்தம் ${total} · கொடுத்தது ${paid} · பாக்கி ${pending}`,
+    linkOffer: 'SMS-ல Paytm payment link',
+    linkOfferTo: (phone) => `${phone}-க்கு SMS-ல Paytm payment link`,
+    linkSent: (phone) => `${phone}-க்கு அனுப்பியாச்சு. பணம் வந்ததும் entry தானா முடிஞ்சிடும்.`,
+    paidToQr: 'உங்க கடை QR-ல வந்தது',
+    save: 'ஆமா, save பண்ணுங்க',
+    sendLink: 'link அனுப்புங்க',
+    notNow: 'இப்போ வேண்டாம்',
+    skip: 'விடுங்க',
+    viewLedger: 'கணக்குல பாருங்க',
+    speakEntry: 'ஒரு entry சொல்லுங்க',
+    answerByVoice: 'குரல்ல பதில் சொல்லுங்க',
+    stopListening: 'கேட்பதை நிறுத்துங்க',
+    changeLanguage: 'மொழியை மாத்துங்க',
+  },
+
+  notices: {
+    micBlocked: {
+      title: 'Pari-க்கு microphone வேணும்',
+      detail: 'settings-ல அனுமதி கொடுங்க, இல்லன்னா button-ல பதில் சொல்லுங்க.',
+    },
+    micFailed: { title: 'microphone ஆன் ஆகல', detail: 'மறுபடியும் முயற்சிக்க வானத்தைத் தொடுங்க.' },
+    nothingHeard: 'எதுவும் கேக்கல, மறுபடியும் சொல்லுங்க.',
+    offline: (apiUrl) => ({ title: 'Pari-ஐ அணுக முடியல', detail: `backend ${apiUrl}-ல ஓடுதான்னு பாருங்க.` }),
+    cantHear: 'Pari-க்கு இப்போ கேக்க முடியல',
+    failed: { title: 'அது நடக்கல', detail: 'மறுபடியும் முயற்சிக்க வானத்தைத் தொடுங்க.' },
+  },
+
+  qr: {
+    overline: 'பணம் வாங்க',
+    title: 'scan பண்ணி pay பண்ணுங்க',
+    loadFailed: 'உங்க QR-ஐ load பண்ண முடியல.',
+    copy: 'ID copy பண்ணுங்க',
+    copied: 'copy ஆச்சு',
+    share: 'share பண்ணுங்க',
+    shareMessage: (shop, payload) => `Pyari Pari மூலம் ${shop}-க்கு pay பண்ணுங்க: ${payload}`,
+    overLink: 'link கேட்டதை விட அதிகம்',
+    onQr: 'உங்க QR-ல',
+    waiting: (count) => `இன்னும் ${count} காத்திருக்கு`,
+    ask: (amount, name) => `${amount} வந்திருக்கு, ${name}-ஓடதா?`,
+    askWhose: (amount) => `${amount} வந்திருக்கு. யாரோடது?`,
+    noMatch: 'இந்த payment எந்த open entry-யோடயும் match ஆகல.',
+    staysPending: (left, pending) => `${pending} பாக்கியில ${left} இன்னும் பாக்கி இருக்கும்`,
+    clears: (pending) => `${pending} பாக்கி முழுசா முடிஞ்சிடும்`,
+    clearsWithExtra: (pending, extra) => `${pending} பாக்கி முடிஞ்சிடும், ${extra} அதிகமா வந்திருக்கு`,
+    okay: 'சரி',
+  },
+
+  ledger: {
+    title: 'கணக்கு',
+    toCollect: 'வர வேண்டியது',
+    collectedToday: 'இன்னைக்கு வந்தது',
+    openEntries: 'திறந்த entry-கள்',
+    filters: { all: 'எல்லாம்', open: 'திறந்தவை', closed: 'முடிஞ்சவை' },
+    empty: {
+      all: 'இன்னும் entry எதுவும் இல்ல. “பேசுங்க” tab-ல ஒண்ணு சொல்லுங்க, confirm பண்ணதும் இங்க வரும்.',
+      open: 'வசூலிக்க எதுவும் இல்ல. எல்லா entry-யும் முடிஞ்சது.',
+      closed: 'இன்னும் எந்த entry-யும் முடியல.',
+    },
+    loadFailed: 'கணக்கை load பண்ண முடியல.',
+    closedByLink: 'link-ல முடிஞ்சது',
+    closedByQr: 'QR-ல முடிஞ்சது',
+    paidInFull: 'முழுசா கொடுத்தாச்சு',
+    linkSent: 'link அனுப்பியாச்சு',
+    paid: (amount) => `${amount} கொடுத்தாங்க`,
+    nothingPaid: 'இன்னும் எதுவும் கொடுக்கல',
+    pending: 'பாக்கி',
+    settled: 'கொடுத்தது',
+    today: 'இன்னைக்கு',
+    yesterday: 'நேத்து',
+  },
+
+  language: {
+    title: 'Pari-யோட மொழியைத் தேர்ந்தெடுங்க',
+    note: 'Pari இந்த மொழியில கேட்டு பதில் சொல்லுவா. அப்புறம் “பேசுங்க” tab-ல மாத்திக்கலாம்.',
+    failed: 'save ஆகல. மறுபடியும் முயற்சி பண்ணுங்க.',
+  },
+};

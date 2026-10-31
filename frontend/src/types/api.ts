@@ -3,6 +3,8 @@
  * Amounts are rupees here; the services convert them to paise for the screens.
  */
 
+import type { Language } from '@/i18n/languages';
+
 export type EntryStatusDto = 'UNCONFIRMED' | 'OPEN' | 'CLOSED' | 'REJECTED';
 
 export type ConversationState =
@@ -13,10 +15,14 @@ export type ConversationState =
   | 'AWAITING_PHONE_CONFIRM'
   | 'AWAITING_QR_MATCH';
 
-/** What Pari says. `text` is for display (Roman Hinglish), `speech` is what Bulbul reads. */
+/** What Pari says. `text` is for display, `speech` is what Bulbul reads. */
 export type Line = {
   text: string;
   speech: string;
+  /** The language both are in, which picks the voice. */
+  language: Language;
+  /** Which line this is, for example `notAnEntry`. */
+  key: string;
 };
 
 export type CustomerDto = {
@@ -83,6 +89,8 @@ export type MerchantDto = {
   name: string;
   upiId: string | null;
   qrPayload: string;
+  /** null until the merchant picks one. */
+  language: Language | null;
 };
 
 export type ConverseResponse = {

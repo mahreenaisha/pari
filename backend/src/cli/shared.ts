@@ -38,7 +38,7 @@ export async function say(api: PariApi, line: Line, mute: boolean): Promise<numb
   let firstSound: number | null = null;
   try {
     status.show("Pari is speaking...", c.magenta);
-    const body = await api.ttsStream(line.speech);
+    const body = await api.ttsStream(line.speech, line.language);
     await playStream(body, () => {
       firstSound = performance.now() - started;
     });

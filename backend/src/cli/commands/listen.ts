@@ -1,6 +1,5 @@
 import { unlink } from "node:fs/promises";
 import type { ConversationState, ConverseResponse, Line } from "../../contracts/index.js";
-import { lines } from "../../llm/readback.js";
 import { ApiError, subscribeEvents, type PariApi } from "../api.js";
 import { calibrateMic, chime, hasSox, recordUntil, recordUtterance, stopRecorders, wavDurationSeconds } from "../audio.js";
 import { nextKey, startKeys, stopKeys } from "../keys.js";
@@ -10,7 +9,6 @@ import { c, printEntriesTable, printError, printInfo } from "../ui.js";
 type Queued = { kind: "prompt"; line: Line; state: ConversationState } | { kind: "announce"; line: Line };
 
 const MAX_PTT_SECONDS = 30;
-const NOT_AN_ENTRY = lines.notAnEntry().text;
 
 /**
  * The hands-free terminal: Pari listens all the time and every utterance goes
@@ -192,7 +190,7 @@ async function sendClip(api: PariApi, clip: string, opts: { mute: boolean }, ctx
     const turn = await api.converseAudio(clip, false);
     status.clear();
     const replyMs = performance.now() - started;
-    if (ctx.idle && turn.state === "IDLE" && turn.reply.text === NOT_AN_ENTRY) {
+    if (ctx.idle && turn.state === "IDLE" && turn.reply.key === "notAnEntry") {
       printInfo(c.dim(`(not an entry, ignored: "${turn.transcript ?? ""}")`));
       return null;
     }

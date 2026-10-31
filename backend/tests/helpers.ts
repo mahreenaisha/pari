@@ -1,13 +1,14 @@
 import { createApp } from "../src/app.js";
 import { loadEnv } from "../src/config/env.js";
 import { createContext, type AppContext } from "../src/context.js";
+import type { Language } from "../src/contracts/index.js";
 import { openDatabase } from "../src/db/client.js";
 import { migrate } from "../src/db/migrate.js";
 import { seedDemo } from "../src/db/seed.js";
 import { createLogger } from "../src/helpers/logger.js";
 import type { ChatMessage, ChatModel } from "../src/llm/chat.js";
 import { MockPaytmClient } from "../src/paytm/mock.client.js";
-import type { AudioInput, SpeechToText, Transcription } from "../src/stt/saaras.service.js";
+import type { AudioInput, SpeechToText, TranscribeOptions, Transcription } from "../src/stt/saaras.service.js";
 import type { TextToSpeech } from "../src/tts/bulbul.service.js";
 
 export const API_KEY = "test-api-key-123";
@@ -37,16 +38,20 @@ export const entryJson = (customerName: string, total: number | null, paid: numb
 
 /** Audio files are "transcribed" by looking up their filename. */
 export class FakeStt implements SpeechToText {
+  readonly languages: Language[] = [];
   constructor(readonly transcripts: Record<string, string> = {}) {}
-  async transcribe(audio: AudioInput): Promise<Transcription> {
-    return { transcript: this.transcripts[audio.filename] ?? "", languageCode: "hi-IN" };
+  async transcribe(audio: AudioInput, opts: TranscribeOptions): Promise<Transcription> {
+    this.languages.push(opts.language);
+    return { transcript: this.transcripts[audio.filename] ?? "", languageCode: opts.language };
   }
 }
 
 export class FakeTts implements TextToSpeech {
   readonly spoken: string[] = [];
-  async synthesize(text: string): Promise<Buffer> {
+  readonly languages: Language[] = [];
+  async synthesize(text: string, language: Language): Promise<Buffer> {
     this.spoken.push(text);
+    this.languages.push(language);
     return Buffer.from(`RIFF-fake-${text.length}`);
   }
 }

@@ -5,8 +5,11 @@ Expo (SDK 58) app for a voice-first khata, running on the Pari backend in [`../b
 - **Listen**: tap the sky orb and speak, e.g. "Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki". Pari reads it back ("Gupta ji, total ₹350, ₹200 mile, ₹150 baaki. Save karoon?") and nothing is saved until the merchant says or taps yes. If money is still owed, Pari offers to text a Paytm payment link, asking for the customer's number the first time only.
 - **QR**: the shop's payment code. When money lands on it without a link, Pari asks "₹150 aaya, Gupta ji ka?" aloud, and a card steps through the likeliest open entries.
 - **Ledger**: what is left to collect, what came in today, and every entry with its baaki, grouped by day.
+- **Language**: on first launch the app asks which of 11 languages Pari should hear and speak, each shown in its own script. The chip beside the wordmark on Listen changes it.
 
-The backend runs the conversation. The app sends what the merchant said to `POST /api/converse`, as a recording or as the "haan" or "nahi" of a button, then shows Pari's reply and plays it from `/api/tts/stream`. Payments, and Pari's questions about them, arrive as server-sent events from `/api/events`.
+Every screen's text comes from `src/i18n/strings/`, one table per language typed against the same `Strings`, so a missing string fails `tsc`. Dates follow the language but keep the digits 0–9, falling back to English where the engine lacks the language's month names (Chrome, for Odia and Punjabi). Amounts always read "₹12,450". Inter and Instrument Serif have no Indian-script glyphs, so that text uses the phone's own fonts. The tables other than Hindi haven't been reviewed by native speakers yet.
+
+The backend runs the conversation. The app sends what the merchant said to `POST /api/converse`, as a recording or as the "haan" or "nahi" of a button, then shows Pari's reply and plays it from `/api/tts/stream` in the reply's language. Payments, and Pari's questions about them, arrive as server-sent events from `/api/events`.
 
 ## Run it
 
@@ -51,8 +54,9 @@ The demo script is in the [root README](../README.md#10-mobile-app--demo).
 
 ```
 src/
-  app/            routes only (Expo Router): root stack and the (tabs) navigator
+  app/            routes only (Expo Router): root stack, the (tabs) navigator and the language picker
   features/       one folder per screen: screen UI, its hooks and components
+  i18n/           the 11 languages, one string table per language, and useStrings()
   components/     shared UI (sky orb, tab bar, text, buttons, segmented control)
   services/       the only code that talks to the backend: REST, events, recording upload, speech
   theme/          colors, typography, spacing, motion

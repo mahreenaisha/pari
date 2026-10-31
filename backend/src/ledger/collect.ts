@@ -3,8 +3,9 @@ import type { CollectResponse } from "../contracts/index.js";
 import { toEntryDto, toLinkDto } from "../contracts/mappers.js";
 import type { EventBus } from "../events/bus.js";
 import { AppError } from "../helpers/errors.js";
+import type { MerchantLanguages } from "../languages.js";
+import { linesFor } from "../llm/lines/index.js";
 import { parseIndianMobile } from "../llm/numbers.js";
-import { lines } from "../llm/readback.js";
 import type { PaytmClient } from "../paytm/client.js";
 import { audit, getEntry, setCustomerPhone, type Db } from "./repository.js";
 import { toRupees } from "./state.js";
@@ -14,6 +15,7 @@ export class CollectService {
     private readonly db: Db,
     private readonly paytm: PaytmClient,
     private readonly events: EventBus,
+    private readonly languages: MerchantLanguages,
   ) {}
 
   /** Sends a fixed-amount Paytm link for whatever is still pending. The phone is asked for once per customer. */
@@ -41,9 +43,10 @@ export class CollectService {
       .where("entry_id", "=", entry.id)
       .where("status", "=", "ACTIVE")
       .execute();
+    const say = linesFor(await this.languages.get(merchantId));
     const reusable = active.find((l) => l.amount_paise === entry.pending_paise && l.phone === phone);
     if (reusable) {
-      return { link: toLinkDto(reusable), entry: toEntryDto(entry), line: lines.linkSent(entry.customer_name, toRupees(reusable.amount_paise)) };
+      return { link: toLinkDto(reusable), entry: toEntryDto(entry), line: say.linkSent(entry.customer_name, toRupees(reusable.amount_paise)) };
     }
     if (active.length) {
       await this.db.updateTable("payment_links").set({ status: "EXPIRED" }).where("entry_id", "=", entry.id).where("status", "=", "ACTIVE").execute();
@@ -73,6 +76,6 @@ export class CollectService {
 
     const entryDto = toEntryDto(entry);
     this.events.publish(merchantId, { type: "entry.updated", entry: entryDto });
-    return { link: toLinkDto(link), entry: entryDto, line: lines.linkSent(entry.customer_name, toRupees(link.amount_paise)) };
+    return { link: toLinkDto(link), entry: entryDto, line: say.linkSent(entry.customer_name, toRupees(link.amount_paise)) };
   }
 }

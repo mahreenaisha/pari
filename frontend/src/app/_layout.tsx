@@ -3,9 +3,9 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider, type Theme } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { LanguageGate } from '@/features/language/language-gate';
 import { queryClient, useAppFocusRefetch } from '@/lib/query-client';
 import { colors, fontAssets, maxContentWidth } from '@/theme';
 
@@ -29,10 +29,6 @@ export default function RootLayout() {
 
   useAppFocusRefetch();
 
-  useEffect(() => {
-    if (ready) void SplashScreen.hideAsync();
-  }, [ready]);
-
   if (!ready) return null;
 
   return (
@@ -41,12 +37,14 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <View style={styles.root}>
           <View style={styles.column}>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.background },
-              }}
-            />
+            <LanguageGate>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: colors.background },
+                }}
+              />
+            </LanguageGate>
           </View>
         </View>
       </ThemeProvider>

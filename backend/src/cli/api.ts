@@ -6,6 +6,7 @@ import type {
   ConverseResponse,
   EntryDto,
   EntryStatusDto,
+  Language,
   MatchResponse,
   PariEventDto,
   SttResponse,
@@ -95,15 +96,15 @@ export class PariApi {
     return this.request<SttResponse>("POST", "/api/stt", await audioForm(file));
   }
 
-  tts(text: string) {
-    return this.request<Buffer>("POST", "/api/tts", { text }, true);
+  tts(text: string, language?: Language) {
+    return this.request<Buffer>("POST", "/api/tts", { text, language }, true);
   }
 
   /** WAV bytes as Bulbul produces them. */
-  async ttsStream(text: string): Promise<ReadableStream<Uint8Array>> {
+  async ttsStream(text: string, language: Language): Promise<ReadableStream<Uint8Array>> {
     let res: Response;
     try {
-      res = await fetch(`${this.baseUrl}/api/tts/stream?${new URLSearchParams({ text })}`, { headers: { "x-api-key": this.apiKey } });
+      res = await fetch(`${this.baseUrl}/api/tts/stream?${new URLSearchParams({ text, language })}`, { headers: { "x-api-key": this.apiKey } });
     } catch (err) {
       throw new ApiError(0, "API_UNREACHABLE", `Cannot reach the Pari API at ${this.baseUrl} (${(err as Error).message})`);
     }

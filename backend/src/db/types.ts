@@ -1,4 +1,5 @@
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "kysely";
+import type { Language } from "../contracts/index.js";
 
 type CreatedAt = ColumnType<Date, never, never>;
 type MutableTimestamp = ColumnType<Date, Date | undefined, Date>;
@@ -13,6 +14,7 @@ export interface MerchantsTable {
   id: Generated<string>;
   name: string;
   api_key_hash: string;
+  language: Language | null;
   created_at: CreatedAt;
 }
 

@@ -70,8 +70,9 @@ export function entriesRoutes(ctx: AppContext): Router {
     let answer: "yes" | "no";
     let transcript: string | undefined;
     if (audio) {
-      transcript = (await ctx.stt.transcribe(audio)).transcript;
-      const detected = detectYesNo(transcript);
+      const language = await ctx.languages.get(mid);
+      transcript = (await ctx.stt.transcribe(audio, { language })).transcript;
+      const detected = detectYesNo(transcript, language);
       if (detected === "unknown") {
         throw new AppError(422, "ANSWER_UNCLEAR", `Could not tell yes or no from "${transcript}"`);
       }

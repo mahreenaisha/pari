@@ -1,0 +1,111 @@
+import type { Strings } from './types';
+
+export const en: Strings = {
+  locale: 'en-IN',
+
+  common: {
+    yes: 'Yes',
+    no: 'No',
+    tryAgain: 'Try again',
+  },
+
+  tabs: {
+    listen: 'Listen',
+    qr: 'QR',
+    ledger: 'Ledger',
+    qrToMatch: (count) => `QR, ${count} ${count === 1 ? 'payment' : 'payments'} to match`,
+  },
+
+  listen: {
+    hints: {
+      IDLE: 'Who bought what, and how much they paid.',
+      AWAITING_ENTRY_CONFIRM: 'Yes, no, or what to change.',
+      AWAITING_COLLECT_CHOICE: 'Yes or no?',
+      AWAITING_PHONE: 'Say the ten digits.',
+      AWAITING_PHONE_CONFIRM: 'Yes or no?',
+      AWAITING_QR_MATCH: 'Yes or no?',
+    },
+    listening: 'Listening…',
+    thinking: 'Thinking…',
+    start: 'Tap the sky and speak',
+    example: '“Gupta ji bought goods for 350, paid 200 by UPI, 150 pending”',
+    sayYes: 'Or tap the sky and say “yes”',
+    sayNumber: 'Tap the sky and say the number.',
+    breakdown: (total, paid, pending) => `Total ${total} · Paid ${paid} · Pending ${pending}`,
+    linkOffer: 'Paytm payment link by SMS',
+    linkOfferTo: (phone) => `Paytm payment link by SMS to ${phone}`,
+    linkSent: (phone) => `Sent to ${phone}. The entry closes itself once it’s paid.`,
+    paidToQr: 'Paid to your shop QR',
+    save: 'Yes, save it',
+    sendLink: 'Send link',
+    notNow: 'Not now',
+    skip: 'Never mind',
+    viewLedger: 'View in ledger',
+    speakEntry: 'Speak an entry',
+    answerByVoice: 'Answer by voice',
+    stopListening: 'Stop listening',
+    changeLanguage: 'Change language',
+  },
+
+  notices: {
+    micBlocked: {
+      title: 'Pari needs the microphone',
+      detail: 'Allow it in settings, or answer with the buttons.',
+    },
+    micFailed: { title: 'The microphone didn’t start', detail: 'Tap the sky to try again.' },
+    nothingHeard: 'I didn’t hear anything. Please say it again.',
+    offline: (apiUrl) => ({ title: 'Can’t reach Pari', detail: `Check that the backend is running at ${apiUrl}.` }),
+    cantHear: 'Pari can’t hear right now',
+    failed: { title: 'That didn’t work', detail: 'Tap the sky to try again.' },
+  },
+
+  qr: {
+    overline: 'Get paid',
+    title: 'Scan to pay',
+    loadFailed: 'Couldn’t load your code.',
+    copy: 'Copy ID',
+    copied: 'Copied',
+    share: 'Share',
+    shareMessage: (shop, payload) => `Pay ${shop} with Pyari Pari: ${payload}`,
+    overLink: 'More than the link asked',
+    onQr: 'On your QR',
+    waiting: (count) => `${count} more waiting`,
+    ask: (amount, name) => `${amount} came in. Is it ${name}’s?`,
+    askWhose: (amount) => `${amount} came in. Whose is it?`,
+    noMatch: 'No open entry matches this payment.',
+    staysPending: (left, pending) => `${left} of the ${pending} they owe stays pending`,
+    clears: (pending) => `Clears the ${pending} they owe`,
+    clearsWithExtra: (pending, extra) => `Clears the ${pending} they owe, with ${extra} extra`,
+    okay: 'Okay',
+  },
+
+  ledger: {
+    title: 'Ledger',
+    toCollect: 'To collect',
+    collectedToday: 'Collected today',
+    openEntries: 'Open entries',
+    filters: { all: 'All', open: 'Open', closed: 'Closed' },
+    empty: {
+      all: 'No entries yet. Speak one on the Listen tab and it shows up here once you confirm it.',
+      open: 'Nothing to collect. Every entry is closed.',
+      closed: 'No closed entries yet.',
+    },
+    loadFailed: 'Couldn’t load your ledger.',
+    closedByLink: 'Closed by link',
+    closedByQr: 'Closed by QR',
+    paidInFull: 'Paid in full',
+    linkSent: 'Link sent',
+    paid: (amount) => `Paid ${amount}`,
+    nothingPaid: 'Nothing paid yet',
+    pending: 'pending',
+    settled: 'paid',
+    today: 'Today',
+    yesterday: 'Yesterday',
+  },
+
+  language: {
+    title: 'Choose Pari’s language',
+    note: 'Pari listens and answers in it. You can change it later on the Listen tab.',
+    failed: 'Couldn’t save that. Try again.',
+  },
+};

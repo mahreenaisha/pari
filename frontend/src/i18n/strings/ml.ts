@@ -1,0 +1,114 @@
+import type { Strings } from './types';
+
+export const ml: Strings = {
+  locale: 'ml-IN',
+
+  common: {
+    yes: 'അതെ',
+    no: 'ഇല്ല',
+    tryAgain: 'വീണ്ടും ശ്രമിക്കൂ',
+  },
+
+  tabs: {
+    listen: 'പറയൂ',
+    qr: 'QR',
+    ledger: 'കണക്ക്',
+    qrToMatch: (count) => `QR, ${count} payment match ചെയ്യാനുണ്ട്`,
+  },
+
+  listen: {
+    hints: {
+      IDLE: 'ആര് എന്ത് വാങ്ങി, എത്ര തന്നു.',
+      AWAITING_ENTRY_CONFIRM: 'അതെ, ഇല്ല, അല്ലെങ്കിൽ എന്ത് മാറ്റണം.',
+      AWAITING_COLLECT_CHOICE: 'അതെയോ ഇല്ലയോ?',
+      AWAITING_PHONE: 'പത്ത് അക്കവും പറയൂ.',
+      AWAITING_PHONE_CONFIRM: 'അതെയോ ഇല്ലയോ?',
+      AWAITING_QR_MATCH: 'അതെയോ ഇല്ലയോ?',
+    },
+    listening: 'കേൾക്കുന്നു…',
+    thinking: 'ആലോചിക്കുന്നു…',
+    start: 'ആകാശം തൊട്ട് പറയൂ',
+    example: '“രാജൻ ചേട്ടൻ 350 രൂപയുടെ സാധനം വാങ്ങി, 200 UPI-യിൽ തന്നു, 150 ബാക്കി”',
+    sayYes: 'അല്ലെങ്കിൽ ആകാശം തൊട്ട് “അതെ” എന്ന് പറയൂ',
+    sayNumber: 'ആകാശം തൊട്ട് number പറയൂ.',
+    breakdown: (total, paid, pending) => `ആകെ ${total} · തന്നത് ${paid} · ബാക്കി ${pending}`,
+    linkOffer: 'SMS വഴി Paytm payment link',
+    linkOfferTo: (phone) => `${phone}-ലേക്ക് SMS വഴി Paytm payment link`,
+    linkSent: (phone) => `${phone}-ലേക്ക് അയച്ചു. പണം കിട്ടിയാൽ entry തനിയെ തീരും.`,
+    paidToQr: 'നിങ്ങളുടെ കടയിലെ QR-ൽ വന്നു',
+    save: 'അതെ, save ചെയ്യൂ',
+    sendLink: 'link അയയ്ക്കൂ',
+    notNow: 'ഇപ്പോൾ വേണ്ട',
+    skip: 'വിട്ടേക്കൂ',
+    viewLedger: 'കണക്കിൽ കാണൂ',
+    speakEntry: 'ഒരു entry പറയൂ',
+    answerByVoice: 'ശബ്ദത്തിൽ മറുപടി പറയൂ',
+    stopListening: 'കേൾക്കുന്നത് നിർത്തൂ',
+    changeLanguage: 'ഭാഷ മാറ്റൂ',
+  },
+
+  notices: {
+    micBlocked: {
+      title: 'Pari-ക്ക് microphone വേണം',
+      detail: 'settings-ൽ അനുവാദം നൽകൂ, അല്ലെങ്കിൽ button വഴി മറുപടി നൽകൂ.',
+    },
+    micFailed: { title: 'microphone തുടങ്ങിയില്ല', detail: 'വീണ്ടും ശ്രമിക്കാൻ ആകാശം തൊടൂ.' },
+    nothingHeard: 'ഒന്നും കേട്ടില്ല, വീണ്ടും പറയൂ.',
+    offline: (apiUrl) => ({
+      title: 'Pari-യെ കിട്ടുന്നില്ല',
+      detail: `backend ${apiUrl}-ൽ ഓടുന്നുണ്ടോ എന്ന് നോക്കൂ.`,
+    }),
+    cantHear: 'Pari-ക്ക് ഇപ്പോൾ കേൾക്കാൻ പറ്റുന്നില്ല',
+    failed: { title: 'അത് നടന്നില്ല', detail: 'വീണ്ടും ശ്രമിക്കാൻ ആകാശം തൊടൂ.' },
+  },
+
+  qr: {
+    overline: 'പണം വാങ്ങാം',
+    title: 'scan ചെയ്ത് pay ചെയ്യൂ',
+    loadFailed: 'നിങ്ങളുടെ QR load ആയില്ല.',
+    copy: 'ID copy ചെയ്യൂ',
+    copied: 'copy ആയി',
+    share: 'share ചെയ്യൂ',
+    shareMessage: (shop, payload) => `Pyari Pari വഴി ${shop}-ന് pay ചെയ്യൂ: ${payload}`,
+    overLink: 'link ചോദിച്ചതിനേക്കാൾ കൂടുതൽ',
+    onQr: 'നിങ്ങളുടെ QR-ൽ',
+    waiting: (count) => `ഇനിയും ${count} എണ്ണം കാത്തിരിക്കുന്നു`,
+    ask: (amount, name) => `${amount} വന്നു, ${name}-ന്റേതാണോ?`,
+    askWhose: (amount) => `${amount} വന്നു. ആരുടേതാണ്?`,
+    noMatch: 'ഈ payment ഒരു open entry-യുമായും match ആയില്ല.',
+    staysPending: (left, pending) => `${pending} ബാക്കിയിൽ ${left} ഇനിയും ബാക്കി`,
+    clears: (pending) => `${pending} ബാക്കി മുഴുവൻ തീരും`,
+    clearsWithExtra: (pending, extra) => `${pending} ബാക്കി തീരും, ${extra} കൂടുതൽ വന്നു`,
+    okay: 'ശരി',
+  },
+
+  ledger: {
+    title: 'കണക്ക്',
+    toCollect: 'കിട്ടാനുള്ളത്',
+    collectedToday: 'ഇന്ന് കിട്ടിയത്',
+    openEntries: 'ബാക്കിയുള്ള entry-കൾ',
+    filters: { all: 'എല്ലാം', open: 'ബാക്കിയുള്ളവ', closed: 'തീർന്നവ' },
+    empty: {
+      all: 'ഇതുവരെ entry ഒന്നുമില്ല. “പറയൂ” tab-ൽ ഒന്ന് പറയൂ, confirm ചെയ്താൽ ഇവിടെ കാണാം.',
+      open: 'പിരിക്കാൻ ഒന്നുമില്ല. എല്ലാ entry-യും തീർന്നു.',
+      closed: 'ഇതുവരെ ഒരു entry-യും തീർന്നിട്ടില്ല.',
+    },
+    loadFailed: 'കണക്ക് load ആയില്ല.',
+    closedByLink: 'link വഴി തീർന്നു',
+    closedByQr: 'QR വഴി തീർന്നു',
+    paidInFull: 'മുഴുവൻ തന്നു',
+    linkSent: 'link അയച്ചു',
+    paid: (amount) => `${amount} തന്നു`,
+    nothingPaid: 'ഇതുവരെ ഒന്നും തന്നില്ല',
+    pending: 'ബാക്കി',
+    settled: 'തന്നത്',
+    today: 'ഇന്ന്',
+    yesterday: 'ഇന്നലെ',
+  },
+
+  language: {
+    title: 'Pari-യുടെ ഭാഷ തിരഞ്ഞെടുക്കൂ',
+    note: 'Pari ഈ ഭാഷയിൽ കേട്ട് മറുപടി പറയും. പിന്നീട് “പറയൂ” tab-ൽ മാറ്റാം.',
+    failed: 'save ആയില്ല. വീണ്ടും ശ്രമിക്കൂ.',
+  },
+};

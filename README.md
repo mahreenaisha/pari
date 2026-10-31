@@ -21,12 +21,12 @@
 
 ### 🎬 Product Demo Video
 
-<a href="assets/demo.mp4">
+<a href="https://drive.google.com/file/d/1dJf6J4ldn8KyH3-rhGZ1_6KFrnZI6Kc0/view?usp=sharing" target="_blank">
   <img src="assets/demo-preview.png" alt="Pari Live Demo Video" width="560" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);" />
 </a>
 
 <p>
-  <strong>▶️ <a href="assets/demo.mp4">Watch Live Product Demo (demo.mp4)</a></strong>
+  <strong>▶️ <a href="https://drive.google.com/file/d/1dJf6J4ldn8KyH3-rhGZ1_6KFrnZI6Kc0/view?usp=sharing" target="_blank">Watch Live Product Demo (Google Drive)</a></strong>
 </p>
 
 ---

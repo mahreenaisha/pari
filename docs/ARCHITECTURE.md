@@ -191,3 +191,4 @@ Built using **Kysely** query builder over PostgreSQL (or embedded **PGlite** for
 * **`payment_links`**: Paytm link records with short URLs and order tokens (`orderId`).
 * **`payments`**: `LINK`, `QR`, and `CASH` transactions with matching status (`SUGGESTED`, `MATCHED`, `UNMATCHED`, `REJECTED`).
 * **`audit_log`**: Tamper-evident transition audit trail logging actor (`merchant`, `paytm`, `system`) and payloads.
+

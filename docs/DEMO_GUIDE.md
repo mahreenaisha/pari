@@ -62,3 +62,4 @@ A structured cheat sheet for live demonstrations and pitching to judges.
 ### Act 6: 11 Indic Languages
 * Switch language via the chip on the Listen screen (e.g. Tamil, Bengali, Telugu).
 * UI strings, screen read-backs, and Bulbul TTS switch to authentic regional female voice personas.
+

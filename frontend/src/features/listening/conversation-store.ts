@@ -54,20 +54,17 @@ export async function startOver() {
   await resetConversation();
 }
 
-/** Payment news: said now, or after the question Pari is waiting on. */
-export function announce(line: Line, entry?: LedgerEntry) {
-  if (turn.state === 'IDLE') showTurn({ state: 'IDLE', reply: line, entry });
-  else heldBack.push(line);
-}
-
-/** A QR payment was settled by tap. If Pari had asked about it aloud, the server has dropped that question. */
-export async function settleByTap(line: Line, entry?: LedgerEntry) {
-  if (turn.state === 'AWAITING_QR_MATCH' || turn.reply?.key === 'qrSameMoney') {
-    const { state } = await fetchConversationState();
-    if (state === 'IDLE') {
-      showTurn({ state: 'IDLE', reply: line, entry });
-      return;
-    }
-  }
-  announce(line, entry);
+/**
+ * Payment news: said now, or after the question Pari is waiting on. The server may have dropped the question
+ * on screen, e.g. one about the payment just settled by tap, or about a link for an entry it paid off.
+ */
+export async function announce(line: Line, entry?: LedgerEntry) {
+  const waiting =
+    turn.state !== 'IDLE' &&
+    (await fetchConversationState().then(
+      ({ state }) => state !== 'IDLE',
+      () => true,
+    ));
+  if (waiting) heldBack.push(line);
+  else showTurn({ state: 'IDLE', reply: line, entry });
 }

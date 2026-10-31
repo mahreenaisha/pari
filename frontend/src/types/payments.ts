@@ -18,4 +18,6 @@ export type QrPayment = {
   receivedAt: string;
   /** Open entries this payment may settle, best match first. */
   suggestions: MatchSuggestion[];
+  /** The suggestion Pari is asking about aloud, when she's asking about this payment. */
+  askedEntryId?: string;
 };

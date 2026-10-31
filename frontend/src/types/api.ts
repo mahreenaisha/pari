@@ -88,6 +88,12 @@ export type SuggestionDto = {
   candidates: CandidateDto[];
 };
 
+/** The waiting payment Pari is asking about aloud, and the entry she asked about. */
+export type QrQuestionDto = {
+  paymentId: string;
+  entryId: string;
+};
+
 export type MerchantDto = {
   id: string;
   name: string;

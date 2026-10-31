@@ -106,6 +106,17 @@ export const mr: Strings = {
     linkSent: 'link पाठवली',
     paid: (amount) => `${amount} दिले`,
     nothingPaid: 'अजून काहीच दिलं नाही',
+    paidBy: {
+      qr: (amount) => `QR ने ${amount} दिले`,
+      cash: (amount) => `रोखीने ${amount} दिले`,
+      link: (amount) => `link ने ${amount} दिले`,
+    },
+    history: {
+      bought: (total) => `${total} चं सामान घेतलं`,
+      atCounter: (amount) => `तेव्हाच ${amount} दिले`,
+      extra: (amount) => `${amount} जास्त`,
+      linkSent: (amount) => `${amount} ची link पाठवली`,
+    },
     pending: 'बाकी',
     settled: 'दिले',
     today: 'आज',

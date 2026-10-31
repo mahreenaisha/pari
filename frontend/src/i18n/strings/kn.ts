@@ -103,6 +103,17 @@ export const kn: Strings = {
     linkSent: 'link ಹೋಗಿದೆ',
     paid: (amount) => `${amount} ಕೊಟ್ಟಿದ್ದಾರೆ`,
     nothingPaid: 'ಇನ್ನೂ ಏನೂ ಕೊಟ್ಟಿಲ್ಲ',
+    paidBy: {
+      qr: (amount) => `QR ಮೂಲಕ ${amount} ಕೊಟ್ಟಿದ್ದಾರೆ`,
+      cash: (amount) => `ನಗದಾಗಿ ${amount} ಕೊಟ್ಟಿದ್ದಾರೆ`,
+      link: (amount) => `link ಮೂಲಕ ${amount} ಕೊಟ್ಟಿದ್ದಾರೆ`,
+    },
+    history: {
+      bought: (total) => `${total} ಸಾಮಾನು ತಗೊಂಡರು`,
+      atCounter: (amount) => `ಆಗಲೇ ${amount} ಕೊಟ್ಟಿದ್ದಾರೆ`,
+      extra: (amount) => `${amount} ಹೆಚ್ಚು`,
+      linkSent: (amount) => `${amount} ಗೆ link ಹೋಗಿದೆ`,
+    },
     pending: 'ಬಾಕಿ',
     settled: 'ಕೊಟ್ಟಿದ್ದು',
     today: 'ಇವತ್ತು',

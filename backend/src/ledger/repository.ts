@@ -223,16 +223,19 @@ export async function listEntries(
   return q.orderBy("e.created_at", "desc").limit(filter.limit ?? 50).execute();
 }
 
+/** A payment matched to an entry, and how much of it went in: less than all of it when it was more than was owed. */
+export type EntryPayment = Payment & { applied_paise: number };
+
 export interface EntryHistory {
   link: PaymentLink | null;
-  payments: Payment[];
+  payments: EntryPayment[];
 }
 
-/** The latest payment link and the matched payments of each entry, in two queries. */
+/** The latest payment link and the matched payments of each entry, in three queries. */
 export async function entryHistory(db: Db, merchantId: string, entryIds: string[]): Promise<Map<string, EntryHistory>> {
   const history = new Map<string, EntryHistory>(entryIds.map((id) => [id, { link: null, payments: [] }]));
   if (entryIds.length === 0) return history;
-  const [links, payments] = await Promise.all([
+  const [links, payments, applications] = await Promise.all([
     db.selectFrom("payment_links").selectAll().where("entry_id", "in", entryIds).orderBy("created_at", "asc").execute(),
     db
       .selectFrom("payments")
@@ -242,9 +245,19 @@ export async function entryHistory(db: Db, merchantId: string, entryIds: string[
       .where("match_status", "=", "MATCHED")
       .orderBy("created_at", "asc")
       .execute(),
+    db
+      .selectFrom("audit_log")
+      .select(["payment_id", sql<number>`(payload->>'appliedPaise')::int`.as("applied_paise")])
+      .where("entry_id", "in", entryIds)
+      .where("payment_id", "is not", null)
+      .where(sql`payload->>'appliedPaise'`, "is not", null)
+      .execute(),
   ]);
+  const applied = new Map(applications.map((a) => [a.payment_id, a.applied_paise]));
   for (const link of links) history.get(link.entry_id)!.link = link;
-  for (const payment of payments) history.get(payment.entry_id!)!.payments.push(payment);
+  for (const payment of payments) {
+    history.get(payment.entry_id!)!.payments.push({ ...payment, applied_paise: applied.get(payment.id) ?? payment.amount_paise });
+  }
   return history;
 }
 

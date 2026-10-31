@@ -106,6 +106,17 @@ export const pa: Strings = {
     linkSent: 'link ਭੇਜਿਆ',
     paid: (amount) => `${amount} ਦਿੱਤੇ`,
     nothingPaid: 'ਅਜੇ ਕੁਝ ਨਹੀਂ ਦਿੱਤਾ',
+    paidBy: {
+      qr: (amount) => `QR ਨਾਲ ${amount} ਦਿੱਤੇ`,
+      cash: (amount) => `ਨਕਦ ${amount} ਦਿੱਤੇ`,
+      link: (amount) => `link ਨਾਲ ${amount} ਦਿੱਤੇ`,
+    },
+    history: {
+      bought: (total) => `${total} ਦਾ ਸਮਾਨ ਲਿਆ`,
+      atCounter: (amount) => `ਉਦੋਂ ਹੀ ${amount} ਦਿੱਤੇ`,
+      extra: (amount) => `${amount} ਵੱਧ`,
+      linkSent: (amount) => `${amount} ਦਾ link ਭੇਜਿਆ`,
+    },
     pending: 'ਬਾਕੀ',
     settled: 'ਦਿੱਤੇ',
     today: 'ਅੱਜ',

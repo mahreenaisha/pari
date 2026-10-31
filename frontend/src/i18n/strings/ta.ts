@@ -103,6 +103,17 @@ export const ta: Strings = {
     linkSent: 'link அனுப்பியாச்சு',
     paid: (amount) => `${amount} கொடுத்தாங்க`,
     nothingPaid: 'இன்னும் எதுவும் கொடுக்கல',
+    paidBy: {
+      qr: (amount) => `QR-ல ${amount} கொடுத்தாங்க`,
+      cash: (amount) => `ரொக்கமா ${amount} கொடுத்தாங்க`,
+      link: (amount) => `link-ல ${amount} கொடுத்தாங்க`,
+    },
+    history: {
+      bought: (total) => `${total}-க்கு சாமான் வாங்கினாங்க`,
+      atCounter: (amount) => `அப்பவே ${amount} கொடுத்தாங்க`,
+      extra: (amount) => `${amount} அதிகம்`,
+      linkSent: (amount) => `${amount}-க்கு link அனுப்பியாச்சு`,
+    },
     pending: 'பாக்கி',
     settled: 'கொடுத்தது',
     today: 'இன்னைக்கு',

@@ -419,7 +419,7 @@ npx expo run:android
 7. **Guardrails & Disambiguation**:
    * Try saying *"Gupta didi ne 200 ka samaan liya"* $\rightarrow$ Pari asks if Gupta didi and Gupta ji are the same person.
    * Try missing pieces (*"200 ka samaan diya"*) $\rightarrow$ Pari asks whose khaata it belongs to before saving.
-8. **Finish on the Ledger**: Review "To collect", "Collected today", and closed entries.
+8. **Finish on the Ledger**: Review "To collect", "Collected today", and closed entries. Tap Verma ji's entry to see the ₹100 they paid back under what they bought.
 
 ---
 

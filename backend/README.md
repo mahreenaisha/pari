@@ -171,7 +171,7 @@ All `/api` endpoints (except the signature-verified Paytm webhook) require the `
 * **`PATCH /api/me`**: Sets the merchant's spoken/display language (`{ "language": "hi-IN" }`).
 
 ### Ledger & Entries
-* **`GET /api/entries`**: Lists entries with customer info, payment links, and matched payments. Query params: `status`, `customerId`, `limit`.
+* **`GET /api/entries`**: Lists entries with customer info, payment links, and matched payments. Each payment's `appliedRupees` is what went into the entry, less than `amountRupees` when more was paid than owed. Query params: `status`, `customerId`, `limit`.
 * **`GET /api/entries/:id`**: Retrieves full entry details.
 * **`PATCH /api/entries/:id`**: Manually edits entry amounts or customer name.
 * **`POST /api/entries/:id/confirm`**: Confirms (`"yes"`) or rejects (`"no"`) an unconfirmed entry.

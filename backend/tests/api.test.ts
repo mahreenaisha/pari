@@ -248,7 +248,7 @@ describe("collect + paytm callback", () => {
     expect(paid).toMatchObject({
       status: "CLOSED",
       link: { status: "PAID", amountRupees: 150, createdAt: expect.any(String) },
-      payments: [{ source: "LINK", amountRupees: 150, matchStatus: "MATCHED" }],
+      payments: [{ source: "LINK", amountRupees: 150, appliedRupees: 150, matchStatus: "MATCHED" }],
     });
     expect(body.entries.find((e: { id: string }) => e.id === openId)).toMatchObject({ status: "OPEN", link: null, payments: [] });
 
@@ -287,6 +287,24 @@ describe("part payments and QR fallback", () => {
     const res = await api().post("/api/dev/simulate/link-paid").set(auth).send({ entryId: id, amountRupees: 200 }).expect(200);
     expect(res.body.outcome.status).toBe("suggested");
     expect(res.body.entry.status).toBe("OPEN");
+  });
+
+  it("lists how much of each payment went into the entry, apart from any extra", async () => {
+    const id = await confirmedEntry(DECK);
+    await api().post(`/api/entries/${id}/collect`).set(auth).send({}).expect(201);
+    await api().post("/api/dev/simulate/link-paid").set(auth).send({ entryId: id, amountRupees: 100 }).expect(200);
+    const qr = await api().post("/api/dev/simulate/qr").set(auth).send({ amountRupees: 80, payerName: "Gupta" }).expect(201);
+    await api().post(`/api/payments/${qr.body.suggestion.payment.id}/match`).set(auth).send({ entryId: id }).expect(200);
+
+    const { body } = await api().get(`/api/entries/${id}`).set(auth).expect(200);
+    expect(body.entry).toMatchObject({
+      status: "CLOSED",
+      paidRupees: 350,
+      payments: [
+        { source: "LINK", amountRupees: 100, appliedRupees: 100 },
+        { source: "QR", amountRupees: 80, appliedRupees: 50 },
+      ],
+    });
   });
 
   it("QR payment becomes a ranked suggestion; matching closes the entry", async () => {

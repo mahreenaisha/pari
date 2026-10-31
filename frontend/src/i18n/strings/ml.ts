@@ -19,6 +19,7 @@ export const ml: Strings = {
   listen: {
     hints: {
       IDLE: 'ആര് എന്ത് വാങ്ങി, എത്ര തന്നു.',
+      AWAITING_CUSTOMER_CHOICE: 'അതെയോ ഇല്ലയോ?',
       AWAITING_ENTRY_CONFIRM: 'അതെ, ഇല്ല, അല്ലെങ്കിൽ എന്ത് മാറ്റണം.',
       AWAITING_COLLECT_CHOICE: 'അതെയോ ഇല്ലയോ?',
       AWAITING_PHONE: 'പത്ത് അക്കവും പറയൂ.',

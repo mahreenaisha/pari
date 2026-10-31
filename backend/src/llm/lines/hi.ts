@@ -135,4 +135,25 @@ export const hi: LineBook = {
     text: "Amount saaf sunaai nahi diya. Ek baar phir boliye.",
     speech: "अमाउंट साफ़ सुनाई नहीं दिया। एक बार फिर बोलिए।",
   }),
+
+  newCustomer: () => ({ text: "Naya khaata.", speech: "नया खाता।" }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName} aur ${knownName} ek hi hain?`,
+    speech: `${spokenName} और ${knownName} एक ही हैं?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName} wali entry iske baad. Pehle yeh:`,
+    speech: `${nextCustomerName} वाली एंट्री इसके बाद। पहले यह:`,
+  }),
+
+  nextEntry: () => ({ text: "Ab agli entry.", speech: "अब अगली एंट्री।" }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames} wali entry save nahi hui thi.`,
+    speech: `${customerNames} वाली एंट्री सेव नहीं हुई थी।`,
+  }),
+
+  changeUnclear: () => ({ text: "Kya badalna hai, samajh nahi aaya.", speech: "क्या बदलना है, समझ नहीं आया।" }),
 };

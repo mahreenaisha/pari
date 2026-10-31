@@ -136,4 +136,25 @@ export const ml: LineBook = {
     text: "തുക വ്യക്തമായി കേട്ടില്ല. ഒന്നുകൂടി പറയൂ.",
     speech: "തുക വ്യക്തമായി കേട്ടില്ല. ഒന്നുകൂടി പറയൂ.",
   }),
+
+  newCustomer: () => ({ text: "പുതിയ കണക്ക്.", speech: "പുതിയ കണക്ക്." }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName}-ഉം ${knownName}-ഉം ഒരാൾ തന്നെയാണോ?`,
+    speech: `${spokenName}-ഉം ${knownName}-ഉം ഒരാൾ തന്നെയാണോ?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName}-ന്റെ entry അടുത്തത്. ആദ്യം ഇത്:`,
+    speech: `${nextCustomerName}-ന്റെ entry അടുത്തത്. ആദ്യം ഇത്:`,
+  }),
+
+  nextEntry: () => ({ text: "ഇനി അടുത്ത entry.", speech: "ഇനി അടുത്ത entry." }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames}-ന്റെ entry save ആയിരുന്നില്ല.`,
+    speech: `${customerNames}-ന്റെ entry save ആയിരുന്നില്ല.`,
+  }),
+
+  changeUnclear: () => ({ text: "എന്ത് മാറ്റണമെന്ന് മനസ്സിലായില്ല.", speech: "എന്ത് മാറ്റണമെന്ന് മനസ്സിലായില്ല." }),
 };

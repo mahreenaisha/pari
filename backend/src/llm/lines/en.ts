@@ -136,4 +136,25 @@ export const en: LineBook = {
     text: "I couldn't hear the amounts clearly. Please say it once more.",
     speech: "I couldn't hear the amounts clearly. Please say it once more.",
   }),
+
+  newCustomer: () => ({ text: "New customer.", speech: "New customer." }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `Are ${spokenName} and ${knownName} the same person?`,
+    speech: `Are ${spokenName} and ${knownName} the same person?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName}'s entry comes next. First this one:`,
+    speech: `${nextCustomerName}'s entry comes next. First this one:`,
+  }),
+
+  nextEntry: () => ({ text: "Next entry.", speech: "Next entry." }),
+
+  unsaved: (customerNames) => ({
+    text: `The entry for ${customerNames} was not saved.`,
+    speech: `The entry for ${customerNames} was not saved.`,
+  }),
+
+  changeUnclear: () => ({ text: "I didn't get what to change.", speech: "I didn't get what to change." }),
 };

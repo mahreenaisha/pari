@@ -9,6 +9,7 @@ export type EntryStatusDto = (typeof ENTRY_STATUSES)[number];
 
 export const CONVERSATION_STATES = [
   "IDLE",
+  "AWAITING_CUSTOMER_CHOICE",
   "AWAITING_ENTRY_CONFIRM",
   "AWAITING_COLLECT_CHOICE",
   "AWAITING_PHONE",

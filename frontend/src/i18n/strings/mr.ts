@@ -19,6 +19,7 @@ export const mr: Strings = {
   listen: {
     hints: {
       IDLE: 'कोणी काय घेतलं, आणि किती दिले.',
+      AWAITING_CUSTOMER_CHOICE: 'हो की नाही?',
       AWAITING_ENTRY_CONFIRM: 'हो, नाही, किंवा काय बदलायचं.',
       AWAITING_COLLECT_CHOICE: 'हो की नाही?',
       AWAITING_PHONE: 'दहाही अंक सांगा.',

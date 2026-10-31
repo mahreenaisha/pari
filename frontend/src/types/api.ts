@@ -9,6 +9,7 @@ export type EntryStatusDto = 'UNCONFIRMED' | 'OPEN' | 'CLOSED' | 'REJECTED';
 
 export type ConversationState =
   | 'IDLE'
+  | 'AWAITING_CUSTOMER_CHOICE'
   | 'AWAITING_ENTRY_CONFIRM'
   | 'AWAITING_COLLECT_CHOICE'
   | 'AWAITING_PHONE'

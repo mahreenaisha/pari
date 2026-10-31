@@ -102,3 +102,14 @@ export function detectYesNo(text: string, language: Language): YesNo {
   if (hasPhrase(t, BASE.yes) || (own && hasPhrase(t, own.yes))) return "yes";
   return "unknown";
 }
+
+/** What's left once the yes and no words are taken out: "haan, lekin 250 diye" leaves "lekin 250 diye". */
+export function otherWords(text: string, language: Language): string[] {
+  const own = PREPARED.get(language);
+  const phrases = [...BASE.no, ...BASE.yes, ...(own ? [...own.no, ...own.yes] : [])].sort((a, b) => b.length - a.length);
+  let t = normalize(text);
+  for (const p of phrases) {
+    while (t.includes(` ${p} `)) t = t.replace(` ${p} `, " ");
+  }
+  return t.split(" ").filter(Boolean);
+}

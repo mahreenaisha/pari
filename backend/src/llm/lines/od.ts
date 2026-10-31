@@ -136,4 +136,25 @@ export const od: LineBook = {
     text: "ଟଙ୍କା ପରିମାଣ ସଫା ଶୁଣାଗଲା ନାହିଁ। ଆଉ ଥରେ କୁହନ୍ତୁ।",
     speech: "ଟଙ୍କା ପରିମାଣ ସଫା ଶୁଣାଗଲା ନାହିଁ। ଆଉ ଥରେ କୁହନ୍ତୁ।",
   }),
+
+  newCustomer: () => ({ text: "ନୂଆ ଖାତା।", speech: "ନୂଆ ଖାତା।" }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName} ଓ ${knownName} ଏକା ଲୋକ କି?`,
+    speech: `${spokenName} ଓ ${knownName} ଏକା ଲୋକ କି?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName}-ଙ୍କ entry ଏହା ପରେ। ପ୍ରଥମେ ଏହା:`,
+    speech: `${nextCustomerName}-ଙ୍କ entry ଏହା ପରେ। ପ୍ରଥମେ ଏହା:`,
+  }),
+
+  nextEntry: () => ({ text: "ଏବେ ପରବର୍ତ୍ତୀ entry।", speech: "ଏବେ ପରବର୍ତ୍ତୀ entry।" }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames}-ଙ୍କ entry save ହୋଇନଥିଲା।`,
+    speech: `${customerNames}-ଙ୍କ entry save ହୋଇନଥିଲା।`,
+  }),
+
+  changeUnclear: () => ({ text: "କଣ ବଦଳାଇବାକୁ ହେବ, ବୁଝିପାରିଲି ନାହିଁ।", speech: "କଣ ବଦଳାଇବାକୁ ହେବ, ବୁଝିପାରିଲି ନାହିଁ।" }),
 };

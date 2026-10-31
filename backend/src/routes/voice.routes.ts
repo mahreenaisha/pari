@@ -5,9 +5,9 @@ import type { AppContext } from "../context.js";
 import { merchantId } from "../helpers/auth.js";
 import { AppError } from "../helpers/errors.js";
 import { audioFromRequest, audioUpload, boolField } from "../helpers/upload.js";
-import { assertExtractionEntry } from "../llm/extractor.js";
+import { assertExtractionEntry, KNOWN_CUSTOMERS } from "../llm/extractor.js";
 import { linesFor } from "../llm/lines/index.js";
-import { createUnconfirmedEntry, findOrCreateCustomer, listCustomers } from "../ledger/repository.js";
+import { createUnconfirmedEntry, findOrCreateCustomer, knownCustomerNames } from "../ledger/repository.js";
 import { toPaise } from "../ledger/state.js";
 
 /** Single-shot entry creation, for clients that drive the confirm step themselves. */
@@ -30,12 +30,7 @@ export function voiceRoutes(ctx: AppContext): Router {
       speak = body.speak;
     }
 
-    const customers = await listCustomers(ctx.db, mid);
-    const result = await ctx.extractor.extract(
-      transcript,
-      customers.map((c) => c.name),
-      language,
-    );
+    const result = await ctx.extractor.extract(transcript, await knownCustomerNames(ctx.db, mid, KNOWN_CUSTOMERS), language);
     assertExtractionEntry(result);
     const { customer } = await findOrCreateCustomer(ctx.db, mid, result.extraction.customerName);
     const entry = await createUnconfirmedEntry(ctx.db, {

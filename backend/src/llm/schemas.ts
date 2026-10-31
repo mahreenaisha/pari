@@ -49,6 +49,39 @@ export function completeAmounts(raw: RawExtraction): {
   return { totalRupees: t, paidRupees: p, pendingRupees: q };
 }
 
+type Amounts = Pick<Extraction, "totalRupees" | "paidRupees" | "pendingRupees">;
+type SaidAmounts = Pick<RawExtraction, "totalRupees" | "paidRupees" | "pendingRupees">;
+
+export const hasAmounts = (said: SaidAmounts) =>
+  said.totalRupees !== null || said.paidRupees !== null || said.pendingRupees !== null;
+
+/**
+ * A change keeps what the merchant didn't touch: "250 diye" against a ₹350 total keeps the total and
+ * works out what's left, and "300 ka tha" keeps what was paid.
+ */
+export function applyCorrection(said: SaidAmounts, before: Amounts): Amounts {
+  const { totalRupees: t, paidRupees: p, pendingRupees: q } = said;
+  if (t === null && p !== null && q !== null) return { totalRupees: p + q, paidRupees: p, pendingRupees: q };
+  const total = t ?? before.totalRupees;
+  if (p !== null && q !== null) return { totalRupees: total, paidRupees: p, pendingRupees: q };
+  if (p !== null) return { totalRupees: total, paidRupees: p, pendingRupees: total - p };
+  if (q !== null) return { totalRupees: total, paidRupees: total - q, pendingRupees: q };
+  return { totalRupees: total, paidRupees: before.paidRupees, pendingRupees: total - before.paidRupees };
+}
+
+export function toExtraction(
+  customerName: string | null,
+  amounts: { totalRupees: number | null; paidRupees: number | null; pendingRupees: number | null },
+  items: string[] | null | undefined,
+): { ok: true; value: Extraction } | { ok: false; error: string } {
+  const parsed = Extraction.safeParse({ customerName: customerName ?? "", ...amounts, items: items ?? [] });
+  if (parsed.success) return { ok: true, value: parsed.data };
+  return { ok: false, error: parsed.error.issues.map((i) => i.message).join("; ") };
+}
+
+/** An entry heard on its own, with the one missing amount filled in. */
+export const finalizeExtraction = (raw: RawExtraction) => toExtraction(raw.customerName, completeAmounts(raw), raw.items);
+
 export const EXTRACTION_JSON_SHAPE = `{
   "intent": "entry" | "other",
   "customerName": string | null,

@@ -19,6 +19,7 @@ export const kn: Strings = {
   listen: {
     hints: {
       IDLE: 'ಯಾರು ಏನು ತಗೊಂಡರು, ಎಷ್ಟು ಕೊಟ್ಟರು.',
+      AWAITING_CUSTOMER_CHOICE: 'ಹೌದಾ ಇಲ್ಲವಾ?',
       AWAITING_ENTRY_CONFIRM: 'ಹೌದು, ಇಲ್ಲ, ಅಥವಾ ಏನು ಬದಲಾಯಿಸಬೇಕು.',
       AWAITING_COLLECT_CHOICE: 'ಹೌದಾ ಇಲ್ಲವಾ?',
       AWAITING_PHONE: 'ಹತ್ತೂ ಅಂಕಿಗಳನ್ನು ಹೇಳಿ.',

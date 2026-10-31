@@ -2,12 +2,16 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   applyPayment,
   confirmEntry,
+  createCustomer,
   createUnconfirmedEntry,
   customerBalancePaise,
   findOrCreateCustomer,
   getEntry,
   inTx,
+  knownCustomerNames,
+  matchCustomers,
   rejectEntry,
+  rekeyCustomers,
   updateUnconfirmedEntry,
 } from "../src/ledger/repository.js";
 import { canTransition } from "../src/ledger/state.js";
@@ -47,10 +51,55 @@ describe("state machine", () => {
 describe("customers", () => {
   it("matches honorific and spelling variants to the seeded customer", async () => {
     const a = await findOrCreateCustomer(t.ctx.db, t.merchantId, "gupta JI");
-    const b = await findOrCreateCustomer(t.ctx.db, t.merchantId, "Mr. Guptaa");
+    const b = await findOrCreateCustomer(t.ctx.db, t.merchantId, "Guptaa");
+    const c = await findOrCreateCustomer(t.ctx.db, t.merchantId, "Mr. Gupta");
     expect(a.match).toBe("exact");
     expect(b.match).toBe("fuzzy");
-    expect(b.customer.id).toBe(a.customer.id);
+    expect(c.match).toBe("maybe");
+    expect(new Set([a.customer.id, b.customer.id, c.customer.id]).size).toBe(1);
+  });
+
+  it("keeps Gupta bhaiya and Gupta didi apart, and calls Gupta ji for Gupta didi a maybe", async () => {
+    const ji = (await findOrCreateCustomer(t.ctx.db, t.merchantId, "Gupta ji")).customer;
+    const didi = await createCustomer(t.ctx.db, t.merchantId, "Gupta didi");
+    const bhaiya = await createCustomer(t.ctx.db, t.merchantId, "Gupta bhaiya");
+    expect(new Set([ji.id, didi.id, bhaiya.id]).size).toBe(3);
+    expect(didi.name_normalized).toBe("gupta ~f");
+
+    const forDidi = await matchCustomers(t.ctx.db, t.merchantId, "Guptaa didi");
+    expect(forDidi.map((m) => [m.customer.name, m.match])).toEqual([["Gupta didi", "fuzzy"], ["Gupta ji", "maybe"]]);
+    const forJi = await matchCustomers(t.ctx.db, t.merchantId, "Gupta");
+    expect(forJi[0]).toMatchObject({ customer: { name: "Gupta ji" }, match: "exact" });
+  });
+
+  it("rekeys customers saved before gendered honorifics counted", async () => {
+    await t.ctx.db.updateTable("customers").set({ name_normalized: "sunita" }).where("name", "=", "Sunita didi").execute();
+    await rekeyCustomers(t.ctx.db);
+    const sunita = await t.ctx.db.selectFrom("customers").select("name_normalized").where("name", "=", "Sunita didi").executeTakeFirstOrThrow();
+    expect(sunita.name_normalized).toBe("sunita ~f");
+    expect((await createCustomer(t.ctx.db, t.merchantId, "Sunita ji")).name).toBe("Sunita ji");
+  });
+
+  it("listens for customers with saved entries first, and not for a name only ever said no to", async () => {
+    const kavita = await createCustomer(t.ctx.db, t.merchantId, "Kavita ji");
+    const ruta = await createCustomer(t.ctx.db, t.merchantId, "Ruta ji");
+    for (const [customer, confirm] of [[ruta, false], [kavita, true]] as const) {
+      const entry = await createUnconfirmedEntry(t.ctx.db, {
+        merchantId: t.merchantId,
+        customerId: customer.id,
+        totalPaise: 10000,
+        paidPaise: 0,
+        pendingPaise: 10000,
+        transcript: null,
+        language: null,
+        needsReview: false,
+      });
+      await (confirm ? confirmEntry : rejectEntry)(t.ctx.db, t.merchantId, entry.id);
+    }
+    const names = await knownCustomerNames(t.ctx.db, t.merchantId, 40);
+    expect(names[0]).toBe("Kavita ji");
+    expect(names).toContain("Gupta ji");
+    expect(names).not.toContain("Ruta ji");
   });
 
   it("creates a new customer for an unknown name", async () => {

@@ -20,6 +20,7 @@ export const hi: Strings = {
   listen: {
     hints: {
       IDLE: 'Who bought what, and how much they paid.',
+      AWAITING_CUSTOMER_CHOICE: 'Haan ya nahi?',
       AWAITING_ENTRY_CONFIRM: 'Haan, nahi, or what to change.',
       AWAITING_COLLECT_CHOICE: 'Haan ya nahi?',
       AWAITING_PHONE: 'Say the ten digits.',

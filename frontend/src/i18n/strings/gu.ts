@@ -19,6 +19,7 @@ export const gu: Strings = {
   listen: {
     hints: {
       IDLE: 'કોણે શું લીધું, અને કેટલા આપ્યા.',
+      AWAITING_CUSTOMER_CHOICE: 'હા કે ના?',
       AWAITING_ENTRY_CONFIRM: 'હા, ના, અથવા શું બદલવું.',
       AWAITING_COLLECT_CHOICE: 'હા કે ના?',
       AWAITING_PHONE: 'દસેય આંકડા બોલો.',

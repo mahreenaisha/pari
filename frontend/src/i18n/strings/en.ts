@@ -19,6 +19,7 @@ export const en: Strings = {
   listen: {
     hints: {
       IDLE: 'Who bought what, and how much they paid.',
+      AWAITING_CUSTOMER_CHOICE: 'Yes or no?',
       AWAITING_ENTRY_CONFIRM: 'Yes, no, or what to change.',
       AWAITING_COLLECT_CHOICE: 'Yes or no?',
       AWAITING_PHONE: 'Say the ten digits.',

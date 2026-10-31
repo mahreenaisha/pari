@@ -92,7 +92,7 @@ flowchart TD
 ### A. The Voice & LLM Stack (Sarvam AI)
 * **Speech-to-Text (`saaras:v4`)**:
   * Runs in `codemix` mode and is told the merchant's language (e.g. `ta-IN`), because one-word answers like *"haan"* are too short to detect a language from.
-  * Injected with custom acoustic keyterms (e.g., `"Pari"`, customer names) to prevent phonetic misrecognition.
+  * Given `"Pari"` as a keyterm. Customer names are not: in live tests a list of them made Saaras write one customer's name for another, which is harder to catch than a misheard name.
 * **Large Language Model (`sarvam-105b-conversations`)**:
   * A **105-billion parameter Mixture-of-Experts (MoE)** foundation model hosted on Sarvam Cloud.
   * Configured with temperature `0.1`, JSON object schema enforcement, and optional reasoning effort control.
@@ -157,8 +157,11 @@ Every merchant interaction is handled through a per-merchant serialized session 
 stateDiagram-v2
     [*] --> IDLE
 
+    IDLE --> AWAITING_CUSTOMER_CHOICE: Name only maybe fits a customer ("Gupta didi" for Gupta ji)
+    AWAITING_CUSTOMER_CHOICE --> AWAITING_ENTRY_CONFIRM: Same person ("Haan") or a new khaata ("Nahi")
     IDLE --> AWAITING_ENTRY_CONFIRM: Merchant utters udhar entry
-    AWAITING_ENTRY_CONFIRM --> AWAITING_ENTRY_CONFIRM: Merchant corrects amounts ("Nahi, 250 diye")
+    AWAITING_ENTRY_CONFIRM --> AWAITING_ENTRY_CONFIRM: Merchant corrects amounts ("Nahi, 250 diye" or "Haan, lekin 250 diye")
+    AWAITING_ENTRY_CONFIRM --> AWAITING_ENTRY_CONFIRM: Someone else's entry said -> queued, this one asked again
     AWAITING_ENTRY_CONFIRM --> IDLE: Merchant rejects ("Nahi / Galat")
     AWAITING_ENTRY_CONFIRM --> IDLE: Confirmed & Fully Paid (Pending = 0)
     AWAITING_ENTRY_CONFIRM --> AWAITING_COLLECT_CHOICE: Confirmed & Pending > 0 ("Save karoon? -> Haan")
@@ -180,6 +183,12 @@ stateDiagram-v2
     AWAITING_QR_MATCH --> AWAITING_QR_MATCH: Rejects candidate ("Nahi") -> Next candidate
     AWAITING_QR_MATCH --> IDLE: All candidates rejected -> Set aside as UNMATCHED
 ```
+
+Around the read-back:
+* **Corrections**: a number that differs from the read-back corrects the entry even after *"haan"*, while *"haan, 350 sahi hai"* still saves. In the nine languages whose amount words Pari can't read, any words besides yes or no go to the LLM together with the entry being confirmed. A correction keeps what the merchant didn't change: *"250 diye"* keeps the ₹350 total.
+* **One at a time**: someone else's entry said while one waits for a yes is queued, and read back once the current one is done (*"Ab agli entry."*). A new entry said instead of answering the link, phone or QR question ends that question; the QR payment is asked about again afterwards.
+* **Time out**: a session left alone for two minutes goes back to IDLE, and Pari's next reply says which entries weren't saved.
+* **Names**: honorifics that say man or woman (*bhaiya*, *didi*, *anna*, *akka* and so on) are part of who a customer is, so Gupta bhaiya and Gupta didi are two khaatas. When only one of the two names says it (*Gupta didi* for *Gupta ji*), Pari asks whether they're the same person. A name that opens a new khaata is announced (*"Naya khaata."*), so a misheard name gets caught.
 
 ---
 
@@ -320,7 +329,7 @@ npm run pari
 
 ### Testing & Verification
 ```bash
-# Run unit, integration, and E2E mock suites (about 470 tests without network dependency)
+# Run unit, integration, and E2E mock suites (about 570 tests without network dependency)
 npm test
 
 # Type-check TypeScript sources

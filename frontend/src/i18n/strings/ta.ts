@@ -19,6 +19,7 @@ export const ta: Strings = {
   listen: {
     hints: {
       IDLE: 'யார் என்ன வாங்கினாங்க, எவ்வளவு கொடுத்தாங்க.',
+      AWAITING_CUSTOMER_CHOICE: 'ஆமா அல்லது இல்லை?',
       AWAITING_ENTRY_CONFIRM: 'ஆமா, இல்லை, அல்லது எதை மாத்தணும்.',
       AWAITING_COLLECT_CHOICE: 'ஆமா அல்லது இல்லை?',
       AWAITING_PHONE: 'பத்து digit-ஐயும் சொல்லுங்க.',

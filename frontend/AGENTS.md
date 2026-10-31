@@ -1,11 +1,11 @@
-# 🤖 Agent Developer Guidelines — Pyari Pari Frontend
+# Agent Developer Guidelines — Pyari Pari Frontend
 
 > [!IMPORTANT]
 > This is an **Expo SDK 58 / React Native 0.88** mobile application. Always prioritize mobile-first design patterns, 60fps gesture performance, and strict TypeScript types.
 
 ---
 
-## ⚠️ Modern Expo Guidelines (Do Not Rely on Outdated Training Data)
+## Modern Expo Guidelines (Do Not Rely on Outdated Training Data)
 
 Expo evolves rapidly across major releases. APIs, lifecycle hooks, and configuration options change frequently. Before writing code touching Expo, React Native, or EAS APIs:
 
@@ -15,7 +15,7 @@ Expo evolves rapidly across major releases. APIs, lifecycle hooks, and configura
 
 ---
 
-## 🛠️ Essential Commands
+## Essential Commands
 
 > [!TIP]
 > If a `bun.lock` file is present, use `bunx` instead of `npx`. Otherwise, use standard `npx` / `npm`.
@@ -36,7 +36,7 @@ npx expo install --fix # Align mismatched package versions
 
 ---
 
-## 🧭 Navigation & Routing (Expo Router)
+## Navigation & Routing (Expo Router)
 
 * **File-Based Routing**: All screens and route layouts live exclusively under `src/app/`.
   * Every `.tsx` file in `src/app/` represents a route.
@@ -47,7 +47,7 @@ npx expo install --fix # Align mismatched package versions
 
 ---
 
-## 📦 Native Builds & CNG (Continuous Native Generation)
+## Native Builds & CNG (Continuous Native Generation)
 
 * **Config Plugins & App Config**:
   * Native behavior must be declared in `app.json` and via Expo Config Plugins whenever possible.
@@ -64,7 +64,7 @@ npx expo install --fix # Align mismatched package versions
 
 ---
 
-## 📐 Architecture & Coding Standards
+## Architecture & Coding Standards
 
 1. **Strict i18n Typing**: Every user-facing UI string must be sourced through `useStrings()` from [`src/i18n/strings/`](src/i18n/strings/). The string interface is strictly typed; missing translations in any of the 11 supported languages will fail TypeScript compilation.
 2. **Financial Units**:

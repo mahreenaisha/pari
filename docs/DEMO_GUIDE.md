@@ -1,4 +1,4 @@
-# 🎭 Pari Live Pitch & Demonstration Playbook
+# Pari Demonstration & Pitch Playbook
 
 A structured cheat sheet for live demonstrations and pitching to judges.
 

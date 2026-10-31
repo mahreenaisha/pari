@@ -1,4 +1,4 @@
-# 🏛️ Pari Architecture & Technical Specifications
+# Pari Architecture & Technical Specifications
 
 This document provides a comprehensive technical breakdown of Pari's ambient voice engine, state machine, financial guardrails, and payment reconciliation mechanisms.
 
@@ -8,37 +8,37 @@ This document provides a comprehensive technical breakdown of Pari's ambient voi
 
 ```mermaid
 flowchart TD
-    subgraph ClientLayer["📱 Client Layer"]
+    subgraph ClientLayer["Client Layer"]
         Mobile["Pyari Pari Mobile App<br/>(Expo SDK 58 / React Native 0.88 / Skia Shaders)"]
         CLI["Hands-Free Pari CLI<br/>(Sox Hardware Capture / Ambient VAD / PTT)"]
     end
 
-    subgraph APILayer["⚡ Express 5 + TypeScript Backend"]
+    subgraph APILayer["Express 5 + TypeScript Backend"]
         Auth["Auth & Security Gate<br/>(x-api-key / Rate Limiting / Helmet)"]
         Router["API Router<br/>(/converse, /entries, /payments, /events)"]
         Engine["ConversationEngine<br/>(Per-Merchant Mutex Lock & State Machine)"]
         Bus["In-Process EventBus<br/>(Pub/Sub -> Server-Sent Events SSE)"]
     end
 
-    subgraph AIEngine["🧠 Sarvam AI Indic Intelligence Pipeline"]
+    subgraph AIEngine["Sarvam AI Indic Intelligence Pipeline"]
         STT["Speech-to-Text: saaras:v4<br/>(Code-mixed Indic STT + Merchant Language)"]
         LLM["Extraction: sarvam-105b-conversations<br/>(105B MoE Model with Strict Multi-Event JSON Schema)"]
         TTS["Text-to-Speech: bulbul:v4-flash / v3<br/>(Language-Specific Female Persona, Cached Streaming)"]
     end
 
-    subgraph Guardrails["🛡️ Deterministic Financial Core"]
+    subgraph Guardrails["Deterministic Financial Core"]
         NumParser["Vernacular Number & Fraction Parser<br/>(Sau, Hazaar, Dedh, Dhai, Indian Digits)"]
         InvariantCheck["Accounting Invariant Engine<br/>(Total = Paid + Pending Verification)"]
         LineTables["Deterministic Line Tables<br/>(Typed Screen & Spoken Prompts per Language)"]
     end
 
-    subgraph LedgerLayer["💾 Ledger & Storage Engine"]
+    subgraph LedgerLayer["Ledger & Storage Engine"]
         Collect["CollectService<br/>(Paytm Link Dispatch & SMS Delivery)"]
         Reconciler["Reconciler Engine<br/>(Exact Order ID Match & QR Heuristic Scoring)"]
         DB[(Kysely ORM<br/>PostgreSQL 16 / Embedded PGlite)]
     end
 
-    subgraph External["🌐 External Payment Gateways"]
+    subgraph External["External Payment Gateways"]
         PaytmAPI["Paytm Payment Links API<br/>(Production Sandbox / Mock Simulator)"]
         PaytmWebhook["Paytm Callback Webhook<br/>(HMAC-SHA256 Checksum Signature Verification)"]
     end

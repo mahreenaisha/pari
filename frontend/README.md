@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📱 Pyari Pari — Mobile & Web Client
+# Pyari Pari — Mobile & Web Client
 ### Ambient Voice-First Udhar Ledger Frontend for Indian Kirana Merchants
 
 [![Expo](https://img.shields.io/badge/Expo-SDK%2058-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)

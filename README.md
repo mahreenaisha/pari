@@ -16,22 +16,24 @@
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20PGlite-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/electric-sql/pglite)
 [![Paytm](https://img.shields.io/badge/Payments-Paytm%20Payment%20Links-00b9f5?style=for-the-badge)](https://developer.paytm.com/)
 [![Tests](https://img.shields.io/badge/Tests-796%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
-
----
-
-### Product Walkthrough
-
-<a href="https://drive.google.com/file/d/1dJf6J4ldn8KyH3-rhGZ1_6KFrnZI6Kc0/view?usp=sharing" target="_blank">
-  <img src="assets/demo-preview.png" alt="Pari Live Product Demo" width="560" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);" />
-</a>
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Google_Drive-4285F4?style=for-the-badge&logo=googledrive&logoColor=white)](https://drive.google.com/file/d/1dJf6J4ldn8KyH3-rhGZ1_6KFrnZI6Kc0/view?usp=sharing)
 
 <p>
   <strong><a href="https://drive.google.com/file/d/1dJf6J4ldn8KyH3-rhGZ1_6KFrnZI6Kc0/view?usp=sharing" target="_blank">Watch Live Product Demo on Google Drive &rarr;</a></strong>
 </p>
 
+</div>
+
 ---
 
-</div>
+### App Interface
+
+| Voice Assistant | Open Udhar Ledger | Soundbox Settlement | Counter QR Display |
+| :---: | :---: | :---: | :---: |
+| <img src="assets/screenshots/01-voice-listen.jpeg" width="200" alt="Voice Assistant" /> | <img src="assets/screenshots/02-open-ledger.jpeg" width="200" alt="Open Udhar Ledger" /> | <img src="assets/screenshots/03-settled-ledger.jpeg" width="200" alt="Settled Ledger Entries" /> | <img src="assets/screenshots/04-counter-qr.jpeg" width="200" alt="Counter QR Code" /> |
+| <sub>Tap sky orb & speak shop talk</sub> | <sub>Active credit & Paytm SMS links</sub> | <sub>Auto-closed on incoming UPI</sub> | <sub>Instant counter collection</sub> |
+
+---
 
 ## The Kirana Reality
 

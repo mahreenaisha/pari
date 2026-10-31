@@ -109,7 +109,7 @@ flowchart TD
 ### A. Ambient Voice & Indic LLM Pipeline (Sarvam AI)
 * **Speech-to-Text (`saaras:v4`)**:
   * Operates in `codemix` mode configured with the merchant's chosen language code (e.g. `hi-IN`, `ta-IN`), ensuring accurate transcription even for one-word answers like *"haan"*.
-  * Injected with `"Pari"` as a keyterm. Customer names are deliberately omitted from keyterms: empirical tests showed that injecting customer lists caused Saaras to erroneously substitute existing names for new customers.
+  * Given no keyterms by default. In live tests, `"Pari"` as a keyterm made Saaras write *"Verma ji"* and *"dedh sau"* as "Pari", and a list of customer names caused it to substitute existing names for new customers.
 * **Large Language Model (`sarvam-105b-conversations`)**:
   * A **105-Billion parameter Mixture-of-Experts (MoE)** foundation model built specifically for Indian languages.
   * Running at temperature `0.1` with strict multi-event JSON schema enforcement.

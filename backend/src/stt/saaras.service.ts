@@ -1,5 +1,6 @@
 import type { SarvamAI } from "sarvamai";
 import type { Env } from "../config/env.js";
+import type { Language } from "../contracts/index.js";
 import { getSarvamClient, mapSarvamError, SARVAM_REQUEST_OPTIONS } from "../sarvam/client.js";
 
 export interface AudioInput {
@@ -13,14 +14,20 @@ export interface Transcription {
   languageCode: string | null;
 }
 
+export interface TranscribeOptions {
+  /** The merchant's language. Saaras is told it, because answers like "haan" are too short to detect. */
+  language: Language;
+  keyterms?: string[];
+}
+
 export interface SpeechToText {
-  transcribe(audio: AudioInput, opts?: { keyterms?: string[] }): Promise<Transcription>;
+  transcribe(audio: AudioInput, opts: TranscribeOptions): Promise<Transcription>;
 }
 
 export class SaarasSpeechToText implements SpeechToText {
   constructor(private readonly env: Env) {}
 
-  async transcribe(audio: AudioInput, opts: { keyterms?: string[] } = {}): Promise<Transcription> {
+  async transcribe(audio: AudioInput, opts: TranscribeOptions): Promise<Transcription> {
     const client = getSarvamClient(this.env.SARVAM_API_KEY);
     const keyterms = ["Pari", ...(opts.keyterms ?? [])].slice(0, 50);
     try {
@@ -29,7 +36,7 @@ export class SaarasSpeechToText implements SpeechToText {
           file: { data: audio.data, filename: audio.filename, contentType: audio.mimeType },
           model: this.env.SARVAM_STT_MODEL as SarvamAI.SpeechToTextModel,
           mode: this.env.SARVAM_STT_MODE as SarvamAI.Mode,
-          language_code: this.env.SARVAM_STT_LANGUAGE as SarvamAI.SpeechToTextLanguage,
+          language_code: opts.language,
           ...(this.env.SARVAM_STT_MODEL === "saaras:v4" ? { keyterms } : {}),
         },
         SARVAM_REQUEST_OPTIONS,

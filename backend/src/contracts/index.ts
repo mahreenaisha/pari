@@ -17,7 +17,12 @@ export const CONVERSATION_STATES = [
 ] as const;
 export type ConversationState = (typeof CONVERSATION_STATES)[number];
 
+/** Every language Pari can both hear and speak: the 11 that Bulbul voices. Sarvam writes Odia as od-IN. */
+export const LANGUAGES = ["hi-IN", "en-IN", "bn-IN", "ta-IN", "te-IN", "kn-IN", "ml-IN", "mr-IN", "gu-IN", "pa-IN", "od-IN"] as const;
+export type Language = (typeof LANGUAGES)[number];
+
 const rupees = z.number().nonnegative().max(10_000_000).multipleOf(0.01);
+const language = z.enum(LANGUAGES);
 
 // ------------------------------------------------------------------ requests
 
@@ -50,7 +55,10 @@ export const MatchBody = z.union([
   z.object({ reject: z.literal(true) }),
 ]);
 
-export const TtsBody = z.object({ text: z.string().trim().min(1).max(2500) });
+/** `language` picks the voice; it defaults to the merchant's. */
+export const TtsBody = z.object({ text: z.string().trim().min(1).max(2500), language: language.optional() });
+
+export const PatchMeBody = z.object({ language });
 
 export const ListEntriesQuery = z.object({
   status: z.enum(ENTRY_STATUSES).optional(),
@@ -73,10 +81,14 @@ export const SimulateQrBody = z.object({
 
 // ----------------------------------------------------------------- responses
 
-/** What Pari says. `text` is for display (Roman Hinglish), `speech` is what Bulbul reads. */
+/** What Pari says. `text` is for display, `speech` is what Bulbul reads. */
 export interface Line {
   text: string;
   speech: string;
+  /** The language both are in, so clients can ask for the matching voice. */
+  language: Language;
+  /** Which line this is (for example `notAnEntry`), so clients never need to compare text. */
+  key: string;
 }
 
 export interface CustomerDto {
@@ -169,6 +181,8 @@ export interface MerchantDto {
   upiId: string | null;
   /** What the shop QR encodes: a UPI payment intent when upiId is set, otherwise just the shop name. */
   qrPayload: string;
+  /** The language Pari hears and speaks; null until the merchant picks one (Pari uses Hindi until then). */
+  language: Language | null;
 }
 
 export interface SttResponse {

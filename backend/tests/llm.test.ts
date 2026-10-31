@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { LANGUAGES, type Language } from "../src/contracts/index.js";
 import { EntryExtractor } from "../src/llm/extractor.js";
-import { detectYesNo } from "../src/llm/intent.js";
+import { detectYesNo, type YesNo } from "../src/llm/intent.js";
 import {
   checkAmountsAgainstTranscript,
   extractNumbers,
   formatRupees,
   parseIndianMobile,
   phoneForSpeech,
+  toAsciiDigits,
 } from "../src/llm/numbers.js";
-import { lines } from "../src/llm/readback.js";
+import { linesFor } from "../src/llm/lines/index.js";
 import { completeAmounts } from "../src/llm/schemas.js";
 import { entryJson, FakeChat } from "./helpers.js";
 
@@ -33,6 +35,26 @@ describe("extractNumbers", () => {
 
   it("does not read the verb 'do' (give) as 2", () => {
     expect(extractNumbers("link bhej do")).toEqual([]);
+  });
+
+  it("reads digits in every Indian script", () => {
+    expect(extractNumbers("முருகன் ௩௫௦ ரூபாய்க்கு சாமான், ௨௦௦ கொடுத்தாரு")).toEqual([350, 200]);
+  });
+});
+
+describe("toAsciiDigits", () => {
+  it.each([
+    ["Devanagari", "२५०"],
+    ["Bengali", "২৫০"],
+    ["Gurmukhi", "੨੫੦"],
+    ["Gujarati", "૨૫૦"],
+    ["Odia", "୨୫୦"],
+    ["Tamil", "௨௫௦"],
+    ["Telugu", "౨౫౦"],
+    ["Kannada", "೨೫೦"],
+    ["Malayalam", "൨൫൦"],
+  ])("%s", (_script, digits) => {
+    expect(toAsciiDigits(`₹${digits} 7`)).toBe("₹250 7");
   });
 });
 
@@ -69,6 +91,10 @@ describe("parseIndianMobile", () => {
     expect(parseIndianMobile(text)).toBeNull();
   });
 
+  it("reads a number written in Bengali digits", () => {
+    expect(parseIndianMobile("৯৮৭৬৫ ৪৩২১০")).toBe("9876543210");
+  });
+
   it("formats digits for speech", () => {
     expect(phoneForSpeech("9876543210")).toBe("9 8 7 6 5, 4 3 2 1 0");
   });
@@ -88,7 +114,53 @@ describe("detectYesNo", () => {
     ["Gupta ji ka 300", "unknown"],
     ["kal aana", "unknown"],
   ])("%s -> %s", (text, expected) => {
-    expect(detectYesNo(text)).toBe(expected);
+    expect(detectYesNo(text, "hi-IN")).toBe(expected);
+  });
+
+  it.each<[Language, string, YesNo]>([
+    ["en-IN", "Yes, send it", "yes"],
+    ["en-IN", "No, that's wrong", "no"],
+    ["en-IN", "don't send it", "no"],
+    ["bn-IN", "হ্যাঁ, পাঠিয়ে দাও", "yes"],
+    ["bn-IN", "না, ভুল", "no"],
+    ["bn-IN", "ঠিক নয়", "no"],
+    ["ta-IN", "ஆமா", "yes"],
+    ["ta-IN", "சரி, அனுப்புங்க", "yes"],
+    ["ta-IN", "இல்லை, வேண்டாம்", "no"],
+    ["ta-IN", "சரியில்லை", "no"],
+    ["ta-IN", "aama sari", "yes"],
+    ["te-IN", "అవును", "yes"],
+    ["te-IN", "వద్దు", "no"],
+    ["te-IN", "సరే కాదు", "no"],
+    ["kn-IN", "ಹೌದು", "yes"],
+    ["kn-IN", "ಬೇಡ", "no"],
+    ["ml-IN", "അതെ", "yes"],
+    ["ml-IN", "വേണ്ട", "no"],
+    ["ml-IN", "ശരിയല്ല", "no"],
+    ["mr-IN", "हो", "yes"],
+    ["mr-IN", "नको", "no"],
+    ["mr-IN", "बरोबर नाही", "no"],
+    ["gu-IN", "હા, મોકલો", "yes"],
+    ["gu-IN", "ના", "no"],
+    ["gu-IN", "બરાબર નથી", "no"],
+    ["pa-IN", "ਹਾਂ ਜੀ", "yes"],
+    ["pa-IN", "ਨਹੀਂ", "no"],
+    ["od-IN", "ହଁ", "yes"],
+    ["od-IN", "ନାହିଁ", "no"],
+    ["od-IN", "ଠିକ ନାହିଁ", "no"],
+  ])("%s: %s -> %s", (language, text, expected) => {
+    expect(detectYesNo(text, language)).toBe(expected);
+  });
+
+  it.each(LANGUAGES)("understands the app's haan and nahi buttons in %s", (language) => {
+    expect(detectYesNo("haan", language)).toBe("yes");
+    expect(detectYesNo("nahi", language)).toBe("no");
+  });
+
+  it("counts a language's own words only for merchants who picked it", () => {
+    expect(detectYesNo("हो", "mr-IN")).toBe("yes");
+    expect(detectYesNo("हो गया", "hi-IN")).toBe("unknown");
+    expect(detectYesNo("ho gaya", "hi-IN")).toBe("unknown");
   });
 });
 
@@ -150,7 +222,7 @@ describe("EntryExtractor", () => {
 
 describe("read-back lines", () => {
   it("reads back exactly the saved amounts", () => {
-    const line = lines.entryReadback({ customerName: "Gupta ji", totalRupees: 350, paidRupees: 200, pendingRupees: 150 }, false);
+    const line = linesFor("hi-IN").entryReadback({ customerName: "Gupta ji", totalRupees: 350, paidRupees: 200, pendingRupees: 150 }, false);
     expect(line.text).toBe("Gupta ji, total ₹350, ₹200 mile, ₹150 baaki. Save karoon?");
     expect(line.speech).toContain("150 बाकी");
   });

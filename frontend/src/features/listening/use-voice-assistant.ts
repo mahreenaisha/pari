@@ -6,6 +6,8 @@ import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
 import { env } from '@/config/env';
 import { ledgerKeys } from '@/features/ledger/use-ledger';
 import { qrPaymentKeys } from '@/features/qr/use-qr-payments';
+import type { Notice, Strings } from '@/i18n/strings';
+import { useStrings } from '@/i18n/use-strings';
 import { ApiError } from '@/services/api-client';
 import {
   fetchConversationState,
@@ -23,27 +25,14 @@ import { useMicrophone } from './use-microphone';
 /** What the app itself is doing. Where the conversation stands is the server's `turn.state`. */
 export type Phase = 'ready' | 'recording' | 'transcribing' | 'answering';
 
-/** Why the last attempt didn't get through, shown until the next one. */
-export type Notice = { title: string; detail?: string };
-
-const MIC_BLOCKED: Notice = {
-  title: 'Pari needs the microphone',
-  detail: 'Allow it in settings, or answer with the buttons.',
-};
-const MIC_FAILED: Notice = { title: 'The microphone didn’t start', detail: 'Tap the sky to try again.' };
-
-function noticeFor(error: unknown): Notice {
+function noticeFor(error: unknown, { notices }: Strings): Notice {
   const code = error instanceof ApiError ? error.code : '';
-  if (code === 'NOTHING_HEARD' || code === 'AUDIO_TOO_SHORT') {
-    return { title: 'Kuch sunaai nahi diya, phir boliye.' };
-  }
-  if (code === 'NETWORK') {
-    return { title: 'Can’t reach Pari', detail: `Check that the backend is running at ${env.apiUrl}.` };
-  }
+  if (code === 'NOTHING_HEARD' || code === 'AUDIO_TOO_SHORT') return { title: notices.nothingHeard };
+  if (code === 'NETWORK') return notices.offline(env.apiUrl);
   if (error instanceof ApiError && code.startsWith('SARVAM')) {
-    return { title: 'Pari can’t hear right now', detail: error.message };
+    return { title: notices.cantHear, detail: error.message };
   }
-  return { title: 'That didn’t work', detail: 'Tap the sky to try again.' };
+  return notices.failed;
 }
 
 function energyFor(phase: Phase, speaking: boolean, waiting: boolean) {
@@ -56,6 +45,7 @@ function energyFor(phase: Phase, speaking: boolean, waiting: boolean) {
 
 export function useVoiceAssistant() {
   const queryClient = useQueryClient();
+  const strings = useStrings();
   const turn = useTurn();
   const [phase, setPhase] = useState<Phase>('ready');
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -112,7 +102,7 @@ export function useVoiceAssistant() {
       const uri = await stopMic();
       if (uri) show(await sendSpeech(uri));
     } catch (error) {
-      setNotice(noticeFor(error));
+      setNotice(noticeFor(error, strings));
     }
     go('ready');
   };
@@ -129,9 +119,9 @@ export function useVoiceAssistant() {
     let started = false;
     try {
       started = await startMic();
-      if (!started) setNotice(MIC_BLOCKED);
+      if (!started) setNotice(strings.notices.micBlocked);
     } catch {
-      setNotice(MIC_FAILED);
+      setNotice(strings.notices.micFailed);
     }
     if (!started) go('ready');
     // Tapped again, or left the tab, while the microphone was starting.
@@ -147,7 +137,7 @@ export function useVoiceAssistant() {
     try {
       show(await sendText(text));
     } catch (error) {
-      setNotice(noticeFor(error));
+      setNotice(noticeFor(error, strings));
     }
     go('ready');
   };

@@ -5,6 +5,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SegmentedControl, type SegmentOption } from '@/components/ui/segmented-control';
+import { useStrings } from '@/i18n/use-strings';
 import { formatMoney, formatMonth } from '@/lib/format';
 import { useContentWidth } from '@/lib/use-content-width';
 import type { LedgerSummary } from '@/types/ledger';
@@ -12,11 +13,7 @@ import { colors, radii, screenPadding, spacing } from '@/theme';
 
 import type { LedgerFilter } from './use-ledger';
 
-const FILTERS: readonly SegmentOption<LedgerFilter>[] = [
-  { value: 'all', label: 'All' },
-  { value: 'open', label: 'Open' },
-  { value: 'closed', label: 'Closed' },
-];
+const FILTERS: readonly LedgerFilter[] = ['all', 'open', 'closed'];
 
 type LedgerHeaderProps = {
   summary?: LedgerSummary;
@@ -26,7 +23,12 @@ type LedgerHeaderProps = {
 
 export function LedgerHeader({ summary, filter, onFilterChange }: LedgerHeaderProps) {
   const width = useContentWidth();
+  const strings = useStrings();
   const orbSize = Math.round(Math.min(width * 0.6, 300));
+  const filters: SegmentOption<LedgerFilter>[] = FILTERS.map((value) => ({
+    value,
+    label: strings.ledger.filters[value],
+  }));
 
   return (
     <View style={styles.header}>
@@ -36,10 +38,10 @@ export function LedgerHeader({ summary, filter, onFilterChange }: LedgerHeaderPr
         style={[styles.orb, { top: -orbSize * 0.46, right: -screenPadding - orbSize * 0.34 }]}
       />
 
-      <ScreenHeader overline={formatMonth()} title="Ledger" />
+      <ScreenHeader overline={formatMonth(strings.locale)} title={strings.ledger.title} />
 
       <View style={styles.balance}>
-        <AppText variant="caption">To collect</AppText>
+        <AppText variant="caption">{strings.ledger.toCollect}</AppText>
         <AppText variant="display" style={styles.figure}>
           {summary ? formatMoney(summary.toCollect) : '—'}
         </AppText>
@@ -48,19 +50,19 @@ export function LedgerHeader({ summary, filter, onFilterChange }: LedgerHeaderPr
       <View style={styles.stats}>
         <Stat
           icon="moneyIn"
-          label="Collected today"
+          label={strings.ledger.collectedToday}
           value={summary ? formatMoney(summary.collectedToday) : undefined}
           color={colors.text}
         />
         <Stat
           icon="open"
-          label="Open entries"
+          label={strings.ledger.openEntries}
           value={summary ? String(summary.openCount) : undefined}
           color={colors.due}
         />
       </View>
 
-      <SegmentedControl options={FILTERS} value={filter} onChange={onFilterChange} />
+      <SegmentedControl options={filters} value={filter} onChange={onFilterChange} />
     </View>
   );
 }

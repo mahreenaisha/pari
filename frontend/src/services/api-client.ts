@@ -14,7 +14,7 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH';
   /** Sent as JSON, or as multipart when it is FormData. */
   body?: unknown;
   signal?: AbortSignal;
@@ -70,4 +70,5 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 export const api = {
   get: <T>(path: string, signal?: AbortSignal) => apiRequest<T>(path, { signal }),
   post: <T>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'POST', body }),
+  patch: <T>(path: string, body: unknown) => apiRequest<T>(path, { method: 'PATCH', body }),
 };

@@ -8,7 +8,19 @@ The Express API is the product. The hands-free terminal (`npm run pari`) is a th
 
 ## Stack
 
-Node 22, TypeScript, Express 5, Zod, Kysely on Postgres (PGlite is used when `DATABASE_URL` is empty). Sarvam AI provides speech-to-text (`saaras:v4`), text-to-speech (`bulbul:v4-flash`) and the LLM (`sarvam-105b-conversations`). Paytm is either a built-in mock or the Payment Links sandbox.
+Node 22, TypeScript, Express 5, Zod, Kysely on Postgres (PGlite is used when `DATABASE_URL` is empty). Sarvam AI provides speech-to-text (`saaras:v4`), text-to-speech (`bulbul:v4-flash`, and `bulbul:v3` for four languages) and the LLM (`sarvam-105b-conversations`). Paytm is either a built-in mock or the Payment Links sandbox.
+
+## Languages
+
+Pari works in Hindi, English, Bengali, Tamil, Telugu, Kannada, Malayalam, Marathi, Gujarati, Punjabi and Odia, the 11 languages Bulbul can speak. The merchant's choice is saved on `merchants.language` with `PATCH /api/me`; until then Pari uses Hindi. Saaras is told that language, every line comes from that language's table in `src/llm/lines/`, and Bulbul uses that language's voice from `src/tts/voices.ts`. `PARI_TTS_PACE` applies to every voice; `SARVAM_TTS_MODEL`, `PARI_TTS_SPEAKER` and `SARVAM_STT_LANGUAGE` are gone.
+
+The terminal has no picker and follows whatever the app chose. To set it without the app:
+
+```bash
+curl -X PATCH localhost:4000/api/me -H "x-api-key: pari-dev-key" -H "content-type: application/json" -d '{"language":"ta-IN"}'
+```
+
+Digits in any Indian script are converted, but number words are only parsed in Hindi and English, so the other languages rely on Saaras writing amounts and phone numbers as digits. The tables other than Hindi haven't been reviewed by native speakers yet.
 
 ## Setup
 
@@ -62,19 +74,20 @@ Every `/api` route except the Paytm callback needs `x-api-key: <PARI_API_KEY>`. 
 | `GET /api/converse/state`, `POST /api/converse/reset` | Inspect or reset the session |
 | `GET /api/events` | SSE: `pari.ready`, `pari.entry.updated`, `pari.payment.received`, `pari.payment.suggested`, `pari.prompt`, `pari.announce` |
 | `POST /api/voice/entry` | Stateless: audio or text in, an `UNCONFIRMED` entry and read-back out |
-| `GET /api/me` | The shop for this API key: `{ id, name, upiId, qrPayload }`. `qrPayload` is a UPI payment intent when `PARI_UPI_ID` is set |
+| `GET /api/me` | The shop for this API key: `{ id, name, upiId, qrPayload, language }`. `qrPayload` is a UPI payment intent when `PARI_UPI_ID` is set, and `language` is `null` until the merchant picks one |
+| `PATCH /api/me` | `{ language }`, one of the 11 codes such as `"ta-IN"`. Sets the language Pari hears and speaks |
 | `GET /api/entries`, `GET` or `PATCH /api/entries/:id` | List, read, or correct an entry. Reads include the latest payment `link` and the matched `payments` |
 | `POST /api/entries/:id/confirm` | `{ answer: "yes" \| "no" }`, or a spoken answer as audio |
 | `POST /api/entries/:id/collect` | `{ phone? }`. Sends the payment link |
 | `GET /api/customers`, `GET /api/customers/:id/balance` | Customers and what they owe |
 | `GET /api/payments/suggestions`, `POST /api/payments/:id/match` | Pending QR matches. Body is `{ entryId }` or `{ reject: true }`. Settling a payment here also drops Pari's spoken question about it |
-| `POST /api/stt`, `POST /api/tts` | Raw Saaras and Bulbul |
-| `GET /api/tts/stream?text=` | Bulbul WAV streamed as it is generated (first audio in ~0.5 s) |
+| `POST /api/stt`, `POST /api/tts` | Raw Saaras and Bulbul. `/tts` takes an optional `language` |
+| `GET /api/tts/stream?text=&language=` | Bulbul WAV streamed as it is generated (first audio in ~0.5 s). `language` defaults to the merchant's |
 | `POST /api/paytm/callback` | Paytm status callback (checksum verified, no API key) |
 | `POST /api/dev/simulate/link-paid`, `POST /api/dev/simulate/qr` | Mock mode only |
 | `GET /health` | Status of the database, Paytm mode and Sarvam key |
 
-A browser can record with `MediaRecorder` (webm/opus) and post the blob to `/api/converse` with `speak=false`, show `reply.text` at once, and play `/api/tts/stream?text=<reply.speech>&key=...` in an `<audio>` element. Listen on `/api/events?key=...` for Pari's QR questions and payment announcements.
+A browser can record with `MediaRecorder` (webm/opus) and post the blob to `/api/converse` with `speak=false`, show `reply.text` at once, and play `/api/tts/stream?text=<reply.speech>&language=<reply.language>&key=...` in an `<audio>` element. Listen on `/api/events?key=...` for Pari's QR questions and payment announcements.
 
 ## Sarvam credits
 
@@ -86,7 +99,7 @@ Set `PARI_PAYTM_MODE=sandbox`, `PAYTM_MID` and `PAYTM_MERCHANT_KEY` (16 characte
 
 ## Tests
 
-`npm test` runs about 90 tests with no network: number parsing, extraction checks, entry states, the reconciler, the conversation engine, the HTTP API and an end-to-end run through the terminal's API client against a live server. The LLM, speech and Paytm are all faked. `npm run typecheck` and `npm run build` should both be clean.
+`npm test` runs about 460 tests with no network: number parsing, extraction checks, Pari's lines in all 11 languages, entry states, the reconciler, the conversation engine, the HTTP API and an end-to-end run through the terminal's API client against a live server. The LLM, speech and Paytm are all faked. `npm run typecheck` and `npm run build` should both be clean.
 
 ## Layout
 
@@ -98,8 +111,9 @@ src/
   db/           Kysely client, PGlite dialect, migrations, seed
   ledger/       repository, state machine, reconciler, link collection
   conversation/ per-merchant voice session state machine
-  llm/          extraction, Hindi number parsing, read-back lines
-  stt/ tts/ sarvam/  Sarvam Saaras, Bulbul and client
+  languages.ts  the 11 languages and each merchant's choice
+  llm/          extraction, number parsing, and lines/: one table of Pari's lines per language
+  stt/ tts/ sarvam/  Sarvam Saaras, Bulbul (voices.ts: a voice per language) and client
   paytm/        mock and sandbox clients, checksum
   events/       in-process event bus behind SSE
   routes/       HTTP routes

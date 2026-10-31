@@ -1,0 +1,114 @@
+import type { Strings } from './types';
+
+export const mr: Strings = {
+  locale: 'mr-IN',
+
+  common: {
+    yes: 'हो',
+    no: 'नाही',
+    tryAgain: 'पुन्हा प्रयत्न करा',
+  },
+
+  tabs: {
+    listen: 'बोला',
+    qr: 'QR',
+    ledger: 'खातं',
+    qrToMatch: (count) => `QR, ${count} payment जुळवायचे आहेत`,
+  },
+
+  listen: {
+    hints: {
+      IDLE: 'कोणी काय घेतलं, आणि किती दिले.',
+      AWAITING_ENTRY_CONFIRM: 'हो, नाही, किंवा काय बदलायचं.',
+      AWAITING_COLLECT_CHOICE: 'हो की नाही?',
+      AWAITING_PHONE: 'दहाही अंक सांगा.',
+      AWAITING_PHONE_CONFIRM: 'हो की नाही?',
+      AWAITING_QR_MATCH: 'हो की नाही?',
+    },
+    listening: 'ऐकतेय…',
+    thinking: 'विचार करतेय…',
+    start: 'आकाशाला स्पर्श करून बोला',
+    example: '“पाटील काकांनी 350 रुपयांचं सामान घेतलं, 200 UPI ने दिले, 150 बाकी”',
+    sayYes: 'किंवा आकाशाला स्पर्श करून “हो” म्हणा',
+    sayNumber: 'आकाशाला स्पर्श करून number सांगा.',
+    breakdown: (total, paid, pending) => `एकूण ${total} · दिले ${paid} · बाकी ${pending}`,
+    linkOffer: 'SMS ने Paytm payment link',
+    linkOfferTo: (phone) => `${phone} वर SMS ने Paytm payment link`,
+    linkSent: (phone) => `${phone} वर पाठवली. पैसे आले की entry आपोआप बंद होईल.`,
+    paidToQr: 'तुमच्या दुकानाच्या QR वर आले',
+    save: 'हो, save करा',
+    sendLink: 'link पाठवा',
+    notNow: 'आत्ता नको',
+    skip: 'राहू द्या',
+    viewLedger: 'खात्यात पाहा',
+    speakEntry: 'एक entry सांगा',
+    answerByVoice: 'बोलून उत्तर द्या',
+    stopListening: 'ऐकणं थांबवा',
+    changeLanguage: 'भाषा बदला',
+  },
+
+  notices: {
+    micBlocked: {
+      title: 'Pari ला microphone हवा',
+      detail: 'settings मध्ये परवानगी द्या, किंवा button ने उत्तर द्या.',
+    },
+    micFailed: { title: 'microphone सुरू झाला नाही', detail: 'पुन्हा प्रयत्न करायला आकाशाला स्पर्श करा.' },
+    nothingHeard: 'काहीच ऐकू आलं नाही, पुन्हा सांगा.',
+    offline: (apiUrl) => ({
+      title: 'Pari पर्यंत पोहोचता येत नाही',
+      detail: `backend ${apiUrl} वर चालू आहे का ते पाहा.`,
+    }),
+    cantHear: 'Pari ला आत्ता ऐकू येत नाही',
+    failed: { title: 'ते झालं नाही', detail: 'पुन्हा प्रयत्न करायला आकाशाला स्पर्श करा.' },
+  },
+
+  qr: {
+    overline: 'पैसे घ्या',
+    title: 'scan करून pay करा',
+    loadFailed: 'तुमचा QR load झाला नाही.',
+    copy: 'ID copy करा',
+    copied: 'copy झालं',
+    share: 'share करा',
+    shareMessage: (shop, payload) => `Pyari Pari ने ${shop} ला pay करा: ${payload}`,
+    overLink: 'link ने मागितलेल्यापेक्षा जास्त',
+    onQr: 'तुमच्या QR वर',
+    waiting: (count) => `अजून ${count} थांबलेले`,
+    ask: (amount, name) => `${amount} आले, ${name} यांचे का?`,
+    askWhose: (amount) => `${amount} आले. कोणाचे?`,
+    noMatch: 'हे payment कोणत्याही उघड्या entry शी जुळत नाही.',
+    staysPending: (left, pending) => `${pending} बाकीपैकी ${left} अजून बाकी राहील`,
+    clears: (pending) => `${pending} बाकी पूर्ण फिटेल`,
+    clearsWithExtra: (pending, extra) => `${pending} बाकी फिटेल, ${extra} जास्त आले`,
+    okay: 'ठीक आहे',
+  },
+
+  ledger: {
+    title: 'खातं',
+    toCollect: 'येणे बाकी',
+    collectedToday: 'आज आले',
+    openEntries: 'उघड्या entry',
+    filters: { all: 'सगळ्या', open: 'उघड्या', closed: 'बंद' },
+    empty: {
+      all: 'अजून एकही entry नाही. “बोला” tab वर एक सांगा, confirm केलं की इथे दिसेल.',
+      open: 'वसूल करायला काही नाही. सगळ्या entry बंद आहेत.',
+      closed: 'अजून एकही entry बंद झालेली नाही.',
+    },
+    loadFailed: 'खातं load झालं नाही.',
+    closedByLink: 'link ने बंद',
+    closedByQr: 'QR ने बंद',
+    paidInFull: 'पूर्ण पैसे दिले',
+    linkSent: 'link पाठवली',
+    paid: (amount) => `${amount} दिले`,
+    nothingPaid: 'अजून काहीच दिलं नाही',
+    pending: 'बाकी',
+    settled: 'दिले',
+    today: 'आज',
+    yesterday: 'काल',
+  },
+
+  language: {
+    title: 'Pari ची भाषा निवडा',
+    note: 'Pari या भाषेत ऐकेल आणि उत्तर देईल. नंतर “बोला” tab वरून बदलता येईल.',
+    failed: 'save झालं नाही. पुन्हा प्रयत्न करा.',
+  },
+};

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import { fetchConversationState } from '@/services/conversation-service';
+import { fetchConversationState, resetConversation } from '@/services/conversation-service';
 import { speak } from '@/services/speech-service';
 import type { ConversationState, Line } from '@/types/api';
 import type { LedgerEntry, PaymentLink } from '@/types/ledger';
@@ -45,6 +45,13 @@ export function showTurn(next: Omit<Turn, 'id'>) {
   listeners.forEach((listener) => listener());
   if (next.reply) speak(next.reply);
   if (next.state === 'IDLE') heldBack.splice(0).forEach(speak);
+}
+
+/** Back to the opening prompt, e.g. after a language change, dropping any question Pari was waiting on. */
+export async function startOver() {
+  if (turn.id === 0) return;
+  showTurn({ state: 'IDLE' });
+  await resetConversation();
 }
 
 /** Payment news: said now, or after the question Pari is waiting on. */

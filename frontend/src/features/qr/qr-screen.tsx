@@ -12,6 +12,7 @@ import { PillButton } from '@/components/ui/pill-button';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { env } from '@/config/env';
 import { useLedgerEntries } from '@/features/ledger/use-ledger';
+import { useStrings } from '@/i18n/use-strings';
 import { useContentWidth } from '@/lib/use-content-width';
 import { simulateQrPayment } from '@/services/demo-service';
 import type { LedgerEntry } from '@/types/ledger';
@@ -30,6 +31,7 @@ export function QrScreen() {
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
   const width = useContentWidth();
+  const strings = useStrings();
   const [stageHeight, setStageHeight] = useState(0);
   const { data: payments } = useQrPayments();
   const [payment, ...waiting] = payments ?? [];
@@ -40,7 +42,7 @@ export function QrScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + spacing.sm, paddingBottom: tabBarInset }]}>
-      <ScreenHeader overline="Get paid" title="Scan to pay" />
+      <ScreenHeader overline={strings.qr.overline} title={strings.qr.title} />
 
       <View style={styles.stage} onLayout={(event) => setStageHeight(event.nativeEvent.layout.height)}>
         {stageSize > 0 ? (
@@ -72,6 +74,7 @@ function newestPending(entries: LedgerEntry[] = []) {
 
 /** `covered` while a payment match card sits over the footer. */
 function MyCode({ size, covered }: { size: number; covered: boolean }) {
+  const strings = useStrings();
   const { data: profile, isError, refetch } = useProfile();
   const { data: entries } = useLedgerEntries();
   const cardSize = Math.round(size * 0.6);
@@ -102,9 +105,9 @@ function MyCode({ size, covered }: { size: number; covered: boolean }) {
       ) : isError ? (
         <View style={styles.footer}>
           <AppText variant="body" align="center" color={colors.textSecondary}>
-            Couldn’t load your code.
+            {strings.qr.loadFailed}
           </AppText>
-          <PillButton label="Try again" onPress={() => void refetch()} />
+          <PillButton label={strings.common.tryAgain} onPress={() => void refetch()} />
         </View>
       ) : (
         <Animated.View entering={FadeIn.duration(250)}>
@@ -116,6 +119,7 @@ function MyCode({ size, covered }: { size: number; covered: boolean }) {
 }
 
 function Identity({ profile }: { profile?: Profile }) {
+  const strings = useStrings();
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -134,7 +138,7 @@ function Identity({ profile }: { profile?: Profile }) {
 
   const share = () => {
     if (!profile || !address) return;
-    void Share.share({ message: `Pay ${profile.businessName} with Pyari Pari: ${profile.qrPayload}` });
+    void Share.share({ message: strings.qr.shareMessage(profile.businessName, profile.qrPayload) });
   };
 
   return (
@@ -151,11 +155,11 @@ function Identity({ profile }: { profile?: Profile }) {
         <View style={styles.actions}>
           <PillButton
             icon={copied ? 'check' : 'copy'}
-            label={copied ? 'Copied' : 'Copy ID'}
+            label={copied ? strings.qr.copied : strings.qr.copy}
             onPress={() => void copy()}
             disabled={!address}
           />
-          <PillButton icon="share" label="Share" onPress={share} disabled={!address} />
+          <PillButton icon="share" label={strings.qr.share} onPress={share} disabled={!address} />
         </View>
       )}
     </View>

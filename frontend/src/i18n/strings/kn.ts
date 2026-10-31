@@ -1,0 +1,111 @@
+import type { Strings } from './types';
+
+export const kn: Strings = {
+  locale: 'kn-IN',
+
+  common: {
+    yes: 'ಹೌದು',
+    no: 'ಇಲ್ಲ',
+    tryAgain: 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ',
+  },
+
+  tabs: {
+    listen: 'ಮಾತಾಡಿ',
+    qr: 'QR',
+    ledger: 'ಖಾತೆ',
+    qrToMatch: (count) => `QR, ${count} payment match ಮಾಡಬೇಕು`,
+  },
+
+  listen: {
+    hints: {
+      IDLE: 'ಯಾರು ಏನು ತಗೊಂಡರು, ಎಷ್ಟು ಕೊಟ್ಟರು.',
+      AWAITING_ENTRY_CONFIRM: 'ಹೌದು, ಇಲ್ಲ, ಅಥವಾ ಏನು ಬದಲಾಯಿಸಬೇಕು.',
+      AWAITING_COLLECT_CHOICE: 'ಹೌದಾ ಇಲ್ಲವಾ?',
+      AWAITING_PHONE: 'ಹತ್ತೂ ಅಂಕಿಗಳನ್ನು ಹೇಳಿ.',
+      AWAITING_PHONE_CONFIRM: 'ಹೌದಾ ಇಲ್ಲವಾ?',
+      AWAITING_QR_MATCH: 'ಹೌದಾ ಇಲ್ಲವಾ?',
+    },
+    listening: 'ಕೇಳ್ತಿದ್ದೀನಿ…',
+    thinking: 'ಯೋಚಿಸ್ತಿದ್ದೀನಿ…',
+    start: 'ಆಕಾಶ ಮುಟ್ಟಿ ಮಾತಾಡಿ',
+    example: '“ಮಂಜುನಾಥ್ ಅವರು 350 ರೂಪಾಯಿ ಸಾಮಾನು ತಗೊಂಡರು, 200 UPI ನಲ್ಲಿ ಕೊಟ್ಟರು, 150 ಬಾಕಿ”',
+    sayYes: 'ಅಥವಾ ಆಕಾಶ ಮುಟ್ಟಿ “ಹೌದು” ಅನ್ನಿ',
+    sayNumber: 'ಆಕಾಶ ಮುಟ್ಟಿ number ಹೇಳಿ.',
+    breakdown: (total, paid, pending) => `ಒಟ್ಟು ${total} · ಕೊಟ್ಟಿದ್ದು ${paid} · ಬಾಕಿ ${pending}`,
+    linkOffer: 'SMS ಮೂಲಕ Paytm payment link',
+    linkOfferTo: (phone) => `${phone} ಗೆ SMS ಮೂಲಕ Paytm payment link`,
+    linkSent: (phone) => `${phone} ಗೆ ಕಳಿಸಿದೆ. ಹಣ ಬಂದ ತಕ್ಷಣ entry ತಾನಾಗಿಯೇ ಮುಗಿಯುತ್ತದೆ.`,
+    paidToQr: 'ನಿಮ್ಮ ಅಂಗಡಿ QR ಗೆ ಬಂತು',
+    save: 'ಹೌದು, save ಮಾಡಿ',
+    sendLink: 'link ಕಳಿಸಿ',
+    notNow: 'ಈಗ ಬೇಡ',
+    skip: 'ಬಿಡಿ',
+    viewLedger: 'ಖಾತೆಯಲ್ಲಿ ನೋಡಿ',
+    speakEntry: 'ಒಂದು entry ಹೇಳಿ',
+    answerByVoice: 'ಮಾತಿನಲ್ಲಿ ಉತ್ತರಿಸಿ',
+    stopListening: 'ಕೇಳುವುದನ್ನು ನಿಲ್ಲಿಸಿ',
+    changeLanguage: 'ಭಾಷೆ ಬದಲಿಸಿ',
+  },
+
+  notices: {
+    micBlocked: {
+      title: 'Pari ಗೆ microphone ಬೇಕು',
+      detail: 'settings ನಲ್ಲಿ ಅನುಮತಿ ಕೊಡಿ, ಅಥವಾ button ಗಳಿಂದ ಉತ್ತರಿಸಿ.',
+    },
+    micFailed: { title: 'microphone ಶುರುವಾಗಲಿಲ್ಲ', detail: 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಲು ಆಕಾಶ ಮುಟ್ಟಿ.' },
+    nothingHeard: 'ಏನೂ ಕೇಳಿಸಲಿಲ್ಲ, ಮತ್ತೆ ಹೇಳಿ.',
+    offline: (apiUrl) => ({ title: 'Pari ಸಿಗುತ್ತಿಲ್ಲ', detail: `backend ${apiUrl} ನಲ್ಲಿ ಓಡುತ್ತಿದೆಯಾ ನೋಡಿ.` }),
+    cantHear: 'Pari ಗೆ ಈಗ ಕೇಳಿಸುತ್ತಿಲ್ಲ',
+    failed: { title: 'ಅದು ಆಗಲಿಲ್ಲ', detail: 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಲು ಆಕಾಶ ಮುಟ್ಟಿ.' },
+  },
+
+  qr: {
+    overline: 'ಹಣ ಪಡೆಯಿರಿ',
+    title: 'scan ಮಾಡಿ pay ಮಾಡಿ',
+    loadFailed: 'ನಿಮ್ಮ QR load ಆಗಲಿಲ್ಲ.',
+    copy: 'ID copy ಮಾಡಿ',
+    copied: 'copy ಆಯ್ತು',
+    share: 'share ಮಾಡಿ',
+    shareMessage: (shop, payload) => `Pyari Pari ಮೂಲಕ ${shop} ಗೆ pay ಮಾಡಿ: ${payload}`,
+    overLink: 'link ಕೇಳಿದ್ದಕ್ಕಿಂತ ಹೆಚ್ಚು',
+    onQr: 'ನಿಮ್ಮ QR ನಲ್ಲಿ',
+    waiting: (count) => `ಇನ್ನೂ ${count} ಕಾಯುತ್ತಿವೆ`,
+    ask: (amount, name) => `${amount} ಬಂದಿದೆ, ${name} ಅವರದಾ?`,
+    askWhose: (amount) => `${amount} ಬಂದಿದೆ. ಯಾರದು?`,
+    noMatch: 'ಈ payment ಯಾವ open entry ಜೊತೆಗೂ match ಆಗಲಿಲ್ಲ.',
+    staysPending: (left, pending) => `${pending} ಬಾಕಿಯಲ್ಲಿ ${left} ಇನ್ನೂ ಬಾಕಿ ಉಳಿಯುತ್ತದೆ`,
+    clears: (pending) => `${pending} ಬಾಕಿ ಪೂರ್ತಿ ತೀರುತ್ತದೆ`,
+    clearsWithExtra: (pending, extra) => `${pending} ಬಾಕಿ ತೀರುತ್ತದೆ, ${extra} ಹೆಚ್ಚು ಬಂದಿದೆ`,
+    okay: 'ಸರಿ',
+  },
+
+  ledger: {
+    title: 'ಖಾತೆ',
+    toCollect: 'ಬರಬೇಕಾದದ್ದು',
+    collectedToday: 'ಇವತ್ತು ಬಂದದ್ದು',
+    openEntries: 'ಬಾಕಿ ಇರುವ entry ಗಳು',
+    filters: { all: 'ಎಲ್ಲಾ', open: 'ಬಾಕಿ ಇರುವವು', closed: 'ಮುಗಿದವು' },
+    empty: {
+      all: 'ಇನ್ನೂ entry ಇಲ್ಲ. “ಮಾತಾಡಿ” tab ನಲ್ಲಿ ಒಂದು ಹೇಳಿ, confirm ಮಾಡಿದ ತಕ್ಷಣ ಇಲ್ಲಿ ಕಾಣುತ್ತದೆ.',
+      open: 'ವಸೂಲಿ ಮಾಡಲು ಏನೂ ಇಲ್ಲ. ಎಲ್ಲಾ entry ಮುಗಿದಿವೆ.',
+      closed: 'ಇನ್ನೂ ಯಾವ entry ಯೂ ಮುಗಿದಿಲ್ಲ.',
+    },
+    loadFailed: 'ಖಾತೆ load ಆಗಲಿಲ್ಲ.',
+    closedByLink: 'link ಮೂಲಕ ಮುಗಿಯಿತು',
+    closedByQr: 'QR ಮೂಲಕ ಮುಗಿಯಿತು',
+    paidInFull: 'ಪೂರ್ತಿ ಕೊಟ್ಟಿದ್ದಾರೆ',
+    linkSent: 'link ಹೋಗಿದೆ',
+    paid: (amount) => `${amount} ಕೊಟ್ಟಿದ್ದಾರೆ`,
+    nothingPaid: 'ಇನ್ನೂ ಏನೂ ಕೊಟ್ಟಿಲ್ಲ',
+    pending: 'ಬಾಕಿ',
+    settled: 'ಕೊಟ್ಟಿದ್ದು',
+    today: 'ಇವತ್ತು',
+    yesterday: 'ನಿನ್ನೆ',
+  },
+
+  language: {
+    title: 'Pari ಯ ಭಾಷೆ ಆರಿಸಿ',
+    note: 'Pari ಈ ಭಾಷೆಯಲ್ಲಿ ಕೇಳಿ ಉತ್ತರಿಸುತ್ತಾಳೆ. ಆಮೇಲೆ “ಮಾತಾಡಿ” tab ನಲ್ಲಿ ಬದಲಿಸಬಹುದು.',
+    failed: 'save ಆಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+  },
+};

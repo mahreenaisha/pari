@@ -42,7 +42,7 @@ function playNext() {
 
   // Streamed WAV has no final length in its header. Browsers cope; native players may not, so they download first.
   const player = createAudioPlayer(
-    { uri: apiUrl('/tts/stream', { text: line.speech, key: env.apiKey }) },
+    { uri: apiUrl('/tts/stream', { text: line.speech, language: line.language, key: env.apiKey }) },
     { downloadFirst: process.env.EXPO_OS !== 'web' },
   );
   let started = false;

@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
-import type { ConversationState, EntryDto, Line, LinkDto, SuggestionDto } from "../contracts/index.js";
+import type { ConversationState, EntryDto, Language, Line, LinkDto, SuggestionDto } from "../contracts/index.js";
 import { toEntryDto } from "../contracts/mappers.js";
 import type { EventBus } from "../events/bus.js";
 import { AppError } from "../helpers/errors.js";
 import type { Logger } from "../helpers/logger.js";
+import { DEFAULT_LANGUAGE, type MerchantLanguages } from "../languages.js";
 import type { EntryExtractor } from "../llm/extractor.js";
 import { detectYesNo, type YesNo } from "../llm/intent.js";
+import { joinLines, linesFor } from "../llm/lines/index.js";
 import { mentionsNumber, parseIndianMobile } from "../llm/numbers.js";
-import { lines } from "../llm/readback.js";
 import type { CollectService } from "../ledger/collect.js";
 import type { Reconciler } from "../ledger/reconciler.js";
 import {
@@ -37,6 +38,8 @@ export interface Session {
   entryId: string | null;
   phone: string | null;
   qr: QrTurn | null;
+  /** The merchant's language, read again on every turn so a change in the app applies straight away. */
+  language: Language;
   updatedAt: number;
 }
 
@@ -55,6 +58,7 @@ interface Deps {
   reconciler: Reconciler;
   collect: CollectService;
   events: EventBus;
+  languages: MerchantLanguages;
   logger?: Logger;
 }
 
@@ -84,7 +88,16 @@ export class ConversationEngine {
   getSession(merchantId: string): Session {
     let session = this.sessions.get(merchantId);
     if (!session) {
-      session = { id: randomUUID(), merchantId, state: "IDLE", entryId: null, phone: null, qr: null, updatedAt: Date.now() };
+      session = {
+        id: randomUUID(),
+        merchantId,
+        state: "IDLE",
+        entryId: null,
+        phone: null,
+        qr: null,
+        language: DEFAULT_LANGUAGE,
+        updatedAt: Date.now(),
+      };
       this.sessions.set(merchantId, session);
     } else if (session.state !== "IDLE" && Date.now() - session.updatedAt > this.ttlMs) {
       this.toIdle(session);
@@ -111,10 +124,11 @@ export class ConversationEngine {
   handle(merchantId: string, text: string): Promise<TurnResult> {
     return this.withLock(merchantId, async () => {
       const session = this.getSession(merchantId);
+      session.language = await this.deps.languages.get(merchantId);
       let step = await this.dispatch(session, text.trim());
       if (step.state === "IDLE") {
         const qr = await this.nextQrQuestion(session);
-        if (qr) step = { ...step, state: qr.state, reply: lines.join(step.reply, qr.reply) };
+        if (qr) step = { ...step, state: qr.state, reply: joinLines(step.reply, qr.reply) };
       }
       session.state = step.state;
       session.updatedAt = Date.now();
@@ -141,7 +155,7 @@ export class ConversationEngine {
   }
 
   private async dispatch(session: Session, text: string): Promise<Step> {
-    const answer = detectYesNo(text);
+    const answer = detectYesNo(text, session.language);
     switch (session.state) {
       case "IDLE":
         return this.newEntry(session, text);
@@ -161,9 +175,10 @@ export class ConversationEngine {
   // ------------------------------------------------------------- entry flow
 
   private async newEntry(session: Session, text: string): Promise<Step> {
-    const result = await this.extract(session.merchantId, text);
-    if (result.kind === "not_entry") return { state: "IDLE", reply: lines.notAnEntry() };
-    if (result.kind === "unclear") return { state: "IDLE", reply: lines.amountsUnclear() };
+    const say = linesFor(session.language);
+    const result = await this.extract(session, text);
+    if (result.kind === "not_entry") return { state: "IDLE", reply: say.notAnEntry() };
+    if (result.kind === "unclear") return { state: "IDLE", reply: say.amountsUnclear() };
 
     const { customer } = await findOrCreateCustomer(this.deps.db, session.merchantId, result.extraction.customerName);
     const entry = await createUnconfirmedEntry(this.deps.db, {
@@ -173,28 +188,29 @@ export class ConversationEngine {
       paidPaise: toPaise(result.extraction.paidRupees),
       pendingPaise: toPaise(result.extraction.pendingRupees),
       transcript: text,
-      language: null,
+      language: session.language,
       needsReview: result.needsReview,
     });
     session.entryId = entry.id;
     return {
       state: "AWAITING_ENTRY_CONFIRM",
-      reply: lines.entryReadback(amountsOf(entry), result.needsReview),
+      reply: say.entryReadback(amountsOf(entry), result.needsReview),
       entry: toEntryDto(entry),
       needsReview: result.needsReview,
     };
   }
 
   private async onEntryConfirm(session: Session, text: string, answer: YesNo): Promise<Step> {
+    const say = linesFor(session.language);
     const entryId = session.entryId!;
     if (answer === "yes") {
       const entry = await confirmEntry(this.deps.db, session.merchantId, entryId);
       this.deps.events.publish(session.merchantId, { type: "entry.updated", entry: toEntryDto(entry) });
       if (entry.status === "CLOSED") {
         this.toIdle(session);
-        return { state: "IDLE", reply: lines.savedClosed(), entry: toEntryDto(entry) };
+        return { state: "IDLE", reply: say.savedClosed(), entry: toEntryDto(entry) };
       }
-      return { state: "AWAITING_COLLECT_CHOICE", reply: lines.savedAskCollect(toRupees(entry.pending_paise)), entry: toEntryDto(entry) };
+      return { state: "AWAITING_COLLECT_CHOICE", reply: say.savedAskCollect(toRupees(entry.pending_paise)), entry: toEntryDto(entry) };
     }
 
     if (mentionsNumber(text)) {
@@ -204,14 +220,14 @@ export class ConversationEngine {
     if (answer === "no") {
       const entry = await rejectEntry(this.deps.db, session.merchantId, entryId);
       this.toIdle(session);
-      return { state: "IDLE", reply: lines.entryRejected(), entry: toEntryDto(entry) };
+      return { state: "IDLE", reply: say.entryRejected(), entry: toEntryDto(entry) };
     }
-    return { state: "AWAITING_ENTRY_CONFIRM", reply: lines.notUnderstoodYesNo() };
+    return { state: "AWAITING_ENTRY_CONFIRM", reply: say.notUnderstoodYesNo() };
   }
 
   /** "Nahi, 300 ka tha" while confirming: re-read the amounts and ask again. */
   private async correctEntry(session: Session, text: string): Promise<Step | null> {
-    const result = await this.extract(session.merchantId, text);
+    const result = await this.extract(session, text);
     if (result.kind !== "entry") return null;
     const { customer } = await findOrCreateCustomer(this.deps.db, session.merchantId, result.extraction.customerName);
     const entry = await updateUnconfirmedEntry(this.deps.db, session.merchantId, session.entryId!, {
@@ -224,7 +240,7 @@ export class ConversationEngine {
     });
     return {
       state: "AWAITING_ENTRY_CONFIRM",
-      reply: lines.entryCorrected(amountsOf(entry), result.needsReview),
+      reply: linesFor(session.language).entryCorrected(amountsOf(entry), result.needsReview),
       entry: toEntryDto(entry),
       needsReview: result.needsReview,
     };
@@ -233,48 +249,51 @@ export class ConversationEngine {
   // ----------------------------------------------------------- collect flow
 
   private async onCollectChoice(session: Session, text: string, answer: YesNo): Promise<Step> {
+    const say = linesFor(session.language);
     const entry = await getEntry(this.deps.db, session.merchantId, session.entryId!);
     const spokenPhone = parseIndianMobile(text);
     if (answer === "no") {
       this.toIdle(session);
-      return { state: "IDLE", reply: lines.collectDeclined(), entry: toEntryDto(entry) };
+      return { state: "IDLE", reply: say.collectDeclined(), entry: toEntryDto(entry) };
     }
     if (spokenPhone) {
       session.phone = spokenPhone;
-      return { state: "AWAITING_PHONE_CONFIRM", reply: lines.phoneReadback(spokenPhone) };
+      return { state: "AWAITING_PHONE_CONFIRM", reply: say.phoneReadback(spokenPhone) };
     }
     if (answer === "yes") {
       if (entry.customer_phone) return this.sendLink(session, entry.customer_phone);
-      return { state: "AWAITING_PHONE", reply: lines.askPhone(entry.customer_name) };
+      return { state: "AWAITING_PHONE", reply: say.askPhone(entry.customer_name) };
     }
-    return { state: "AWAITING_COLLECT_CHOICE", reply: lines.notUnderstoodYesNo() };
+    return { state: "AWAITING_COLLECT_CHOICE", reply: say.notUnderstoodYesNo() };
   }
 
   private async onPhone(session: Session, text: string, answer: YesNo): Promise<Step> {
+    const say = linesFor(session.language);
     const phone = parseIndianMobile(text);
     if (phone) {
       session.phone = phone;
-      return { state: "AWAITING_PHONE_CONFIRM", reply: lines.phoneReadback(phone) };
+      return { state: "AWAITING_PHONE_CONFIRM", reply: say.phoneReadback(phone) };
     }
     if (answer === "no") {
       this.toIdle(session);
-      return { state: "IDLE", reply: lines.collectDeclined() };
+      return { state: "IDLE", reply: say.collectDeclined() };
     }
-    return { state: "AWAITING_PHONE", reply: lines.phoneInvalid() };
+    return { state: "AWAITING_PHONE", reply: say.phoneInvalid() };
   }
 
   private async onPhoneConfirm(session: Session, text: string, answer: YesNo): Promise<Step> {
+    const say = linesFor(session.language);
     const newPhone = parseIndianMobile(text);
     if (newPhone && newPhone !== session.phone) {
       session.phone = newPhone;
-      return { state: "AWAITING_PHONE_CONFIRM", reply: lines.phoneReadback(newPhone) };
+      return { state: "AWAITING_PHONE_CONFIRM", reply: say.phoneReadback(newPhone) };
     }
     if (answer === "yes") return this.sendLink(session, session.phone!);
     if (answer === "no") {
       session.phone = null;
-      return { state: "AWAITING_PHONE", reply: lines.phoneRetry() };
+      return { state: "AWAITING_PHONE", reply: say.phoneRetry() };
     }
-    return { state: "AWAITING_PHONE_CONFIRM", reply: lines.notUnderstoodYesNo() };
+    return { state: "AWAITING_PHONE_CONFIRM", reply: say.notUnderstoodYesNo() };
   }
 
   private async sendLink(session: Session, phone: string): Promise<Step> {
@@ -286,7 +305,7 @@ export class ConversationEngine {
       if (err instanceof AppError && err.code.startsWith("PAYTM_")) {
         this.deps.logger?.warn({ err }, "link creation failed");
         this.toIdle(session);
-        return { state: "IDLE", reply: lines.linkFailed() };
+        return { state: "IDLE", reply: linesFor(session.language).linkFailed() };
       }
       throw err;
     }
@@ -297,6 +316,7 @@ export class ConversationEngine {
   private async offerSuggestion(merchantId: string, suggestion: SuggestionDto): Promise<void> {
     const session = this.getSession(merchantId);
     if (session.state !== "IDLE" || suggestion.candidates.length === 0) return;
+    session.language = await this.deps.languages.get(merchantId);
     const step = this.startQrTurn(session, suggestion);
     session.state = step.state;
     session.updatedAt = Date.now();
@@ -319,12 +339,13 @@ export class ConversationEngine {
     };
     return {
       state: "AWAITING_QR_MATCH",
-      reply: lines.qrAsk(suggestion.payment.amountRupees, first.entry.customer.name, first.entry.pendingRupees),
+      reply: linesFor(session.language).qrAsk(suggestion.payment.amountRupees, first.entry.customer.name, first.entry.pendingRupees),
       entry: first.entry,
     };
   }
 
   private async onQrAnswer(session: Session, answer: YesNo): Promise<Step> {
+    const say = linesFor(session.language);
     const qr = session.qr!;
     const entryId = qr.candidateEntryIds[qr.index]!;
     if (answer === "yes") {
@@ -339,7 +360,7 @@ export class ConversationEngine {
         const entry = await getEntry(this.deps.db, session.merchantId, nextId);
         return {
           state: "AWAITING_QR_MATCH",
-          reply: lines.qrAsk(qr.amountRupees, entry.customer_name, toRupees(entry.pending_paise)),
+          reply: say.qrAsk(qr.amountRupees, entry.customer_name, toRupees(entry.pending_paise)),
           entry: toEntryDto(entry),
         };
       }
@@ -347,16 +368,17 @@ export class ConversationEngine {
       this.toIdle(session);
       return { state: "IDLE", reply: res.line };
     }
-    return { state: "AWAITING_QR_MATCH", reply: lines.notUnderstoodYesNo() };
+    return { state: "AWAITING_QR_MATCH", reply: say.notUnderstoodYesNo() };
   }
 
   // ---------------------------------------------------------------- helpers
 
-  private async extract(merchantId: string, text: string) {
-    const customers = await listCustomers(this.deps.db, merchantId);
+  private async extract(session: Session, text: string) {
+    const customers = await listCustomers(this.deps.db, session.merchantId);
     return this.deps.extractor.extract(
       text,
       customers.map((c) => c.name),
+      session.language,
     );
   }
 }

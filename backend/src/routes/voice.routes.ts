@@ -6,7 +6,7 @@ import { merchantId } from "../helpers/auth.js";
 import { AppError } from "../helpers/errors.js";
 import { audioFromRequest, audioUpload, boolField } from "../helpers/upload.js";
 import { assertExtractionEntry } from "../llm/extractor.js";
-import { lines } from "../llm/readback.js";
+import { linesFor } from "../llm/lines/index.js";
 import { createUnconfirmedEntry, findOrCreateCustomer, listCustomers } from "../ledger/repository.js";
 import { toPaise } from "../ledger/state.js";
 
@@ -16,14 +16,12 @@ export function voiceRoutes(ctx: AppContext): Router {
 
   router.post("/voice/entry", audioUpload, async (req, res) => {
     const mid = merchantId(req);
+    const language = await ctx.languages.get(mid);
     const audio = audioFromRequest(req);
     let transcript: string;
-    let language: string | null = null;
     let speak: boolean;
     if (audio) {
-      const result = await ctx.stt.transcribe(audio);
-      transcript = result.transcript;
-      language = result.languageCode;
+      transcript = (await ctx.stt.transcribe(audio, { language })).transcript;
       speak = boolField(req.body?.speak, true);
       if (!transcript) throw new AppError(422, "NOTHING_HEARD", "No speech was recognised in the clip");
     } else {
@@ -36,6 +34,7 @@ export function voiceRoutes(ctx: AppContext): Router {
     const result = await ctx.extractor.extract(
       transcript,
       customers.map((c) => c.name),
+      language,
     );
     assertExtractionEntry(result);
     const { customer } = await findOrCreateCustomer(ctx.db, mid, result.extraction.customerName);
@@ -50,7 +49,7 @@ export function voiceRoutes(ctx: AppContext): Router {
       needsReview: result.needsReview,
     });
     const dto = toEntryDto(entry);
-    const readback = lines.entryReadback(
+    const readback = linesFor(language).entryReadback(
       { customerName: dto.customer.name, totalRupees: dto.totalRupees, paidRupees: dto.paidRupees, pendingRupees: dto.pendingRupees },
       result.needsReview,
     );
@@ -61,7 +60,7 @@ export function voiceRoutes(ctx: AppContext): Router {
       needsReview: result.needsReview,
       unverifiedFields: result.unverifiedFields,
     };
-    if (speak) body.readbackAudio = (await ctx.tts.synthesize(readback.speech)).toString("base64");
+    if (speak) body.readbackAudio = (await ctx.tts.synthesize(readback.speech, readback.language)).toString("base64");
     res.status(201).json(body);
   });
 

@@ -1,0 +1,139 @@
+/** Malayalam: Malayalam script on screen and for speech, with ₹ spoken as രൂപ. */
+import { type LineBook, phoneForDisplay, phoneForSpeech, r } from "./book.js";
+
+export const ml: LineBook = {
+  entryReadback: (e, needsReview) => {
+    const care = needsReview ? "ഒന്ന് ശ്രദ്ധിച്ച് കേൾക്കൂ. " : "";
+    if (e.paidRupees === 0) {
+      return {
+        text: `${care}${e.customerName}, ₹${r(e.pendingRupees)} കടം. save ചെയ്യട്ടെ?`,
+        speech: `${care}${e.customerName}, ${r(e.pendingRupees)} രൂപ കടം. save ചെയ്യട്ടെ?`,
+      };
+    }
+    if (e.pendingRupees === 0) {
+      return {
+        text: `${care}${e.customerName}, ₹${r(e.totalRupees)}-ന്റെ സാധനം, മുഴുവൻ ₹${r(e.paidRupees)} കിട്ടി. save ചെയ്യട്ടെ?`,
+        speech: `${care}${e.customerName}, ${r(e.totalRupees)} രൂപയുടെ സാധനം, മുഴുവൻ ${r(e.paidRupees)} രൂപയും കിട്ടി. save ചെയ്യട്ടെ?`,
+      };
+    }
+    return {
+      text: `${care}${e.customerName}, ആകെ ₹${r(e.totalRupees)}, ₹${r(e.paidRupees)} കിട്ടി, ₹${r(e.pendingRupees)} ബാക്കി. save ചെയ്യട്ടെ?`,
+      speech: `${care}${e.customerName}, ആകെ ${r(e.totalRupees)} രൂപ, ${r(e.paidRupees)} കിട്ടി, ${r(e.pendingRupees)} ബാക്കി. save ചെയ്യട്ടെ?`,
+    };
+  },
+
+  savedAskCollect: (pendingRupees) => ({
+    text: `save ആയി. ₹${r(pendingRupees)}-ന്റെ payment link അയയ്ക്കട്ടെ?`,
+    speech: `save ആയി. ${r(pendingRupees)} രൂപയുടെ payment link അയയ്ക്കട്ടെ?`,
+  }),
+
+  savedClosed: () => ({
+    text: "save ആയി. മുഴുവൻ പണവും കിട്ടി, കണക്ക് തീർന്നു.",
+    speech: "save ആയി. മുഴുവൻ പണവും കിട്ടി, കണക്ക് തീർന്നു.",
+  }),
+
+  entryRejected: () => ({
+    text: "ശരി, entry cancel ചെയ്തു. ഒന്നുകൂടി പറയൂ.",
+    speech: "ശരി, entry cancel ചെയ്തു. ഒന്നുകൂടി പറയൂ.",
+  }),
+
+  entryCorrected: (e, needsReview) => {
+    const base = ml.entryReadback(e, needsReview);
+    return { text: `ശരിയാക്കി. ${base.text}`, speech: `ശരിയാക്കി. ${base.speech}` };
+  },
+
+  askPhone: (customerName) => ({
+    text: `${customerName}-ന്റെ mobile number പറയൂ.`,
+    speech: `${customerName}-ന്റെ mobile number പറയൂ.`,
+  }),
+
+  phoneReadback: (phone) => ({
+    text: `${phoneForDisplay(phone)}. ശരിയാണോ?`,
+    speech: `${phoneForSpeech(phone)}. ശരിയാണോ?`,
+  }),
+
+  phoneInvalid: () => ({
+    text: "ഈ number ശരിയല്ലെന്ന് തോന്നുന്നു. 10 അക്ക mobile number പറയൂ.",
+    speech: "ഈ number ശരിയല്ലെന്ന് തോന്നുന്നു. പത്ത് അക്ക mobile number പറയൂ.",
+  }),
+
+  phoneRetry: () => ({
+    text: "ശരി, number ഒന്നുകൂടി പറയൂ.",
+    speech: "ശരി, number ഒന്നുകൂടി പറയൂ.",
+  }),
+
+  linkSent: (customerName, amountRupees) => ({
+    text: `link അയച്ചു. ${customerName}-ന് ₹${r(amountRupees)}-ന്റെ link SMS ആയി പോയി.`,
+    speech: `link അയച്ചു. ${customerName}-ന് ${r(amountRupees)} രൂപയുടെ link SMS ആയി പോയി.`,
+  }),
+
+  collectDeclined: () => ({
+    text: "ശരി, link അയച്ചില്ല. entry ഇപ്പോഴും open ആണ്.",
+    speech: "ശരി, link അയച്ചില്ല. entry ഇപ്പോഴും open ആണ്.",
+  }),
+
+  linkPaid: (customerName, amountRupees, pendingRupees) =>
+    pendingRupees === 0
+      ? {
+          text: `${customerName} ₹${r(amountRupees)} തന്നു. കണക്ക് തീർന്നു.`,
+          speech: `${customerName} ${r(amountRupees)} രൂപ തന്നു. കണക്ക് തീർന്നു.`,
+        }
+      : {
+          text: `${customerName} ₹${r(amountRupees)} തന്നു. ഇനി ₹${r(pendingRupees)} ബാക്കി.`,
+          speech: `${customerName} ${r(amountRupees)} രൂപ തന്നു. ഇനി ${r(pendingRupees)} രൂപ ബാക്കി.`,
+        },
+
+  qrAsk: (amountRupees, customerName, pendingRupees) => {
+    const over = amountRupees > pendingRupees;
+    return {
+      text: `₹${r(amountRupees)} വന്നു, ${customerName}-ന്റേതാണോ?${over ? ` (ബാക്കി ₹${r(pendingRupees)} മാത്രമേ ഉണ്ടായിരുന്നുള്ളൂ.)` : ""}`,
+      speech: `${r(amountRupees)} രൂപ വന്നു, ${customerName}-ന്റേതാണോ?${over ? ` ബാക്കി ${r(pendingRupees)} രൂപ മാത്രമേ ഉണ്ടായിരുന്നുള്ളൂ.` : ""}`,
+    };
+  },
+
+  qrNoCandidate: (amountRupees) => ({
+    text: `₹${r(amountRupees)}-ന്റെ QR payment വന്നു. ഒരു open entry-യുമായും match ആയില്ല.`,
+    speech: `${r(amountRupees)} രൂപയുടെ QR payment വന്നു. ഒരു open entry-യുമായും match ആയില്ല.`,
+  }),
+
+  qrMatched: (customerName, pendingRupees) =>
+    pendingRupees === 0
+      ? {
+          text: `ശരി, ${customerName}-ന്റെ കണക്കിൽ ചേർത്തു. കണക്ക് തീർന്നു.`,
+          speech: `ശരി, ${customerName}-ന്റെ കണക്കിൽ ചേർത്തു. കണക്ക് തീർന്നു.`,
+        }
+      : {
+          text: `ശരി, ${customerName}-ന്റെ കണക്കിൽ ചേർത്തു. ഇനി ₹${r(pendingRupees)} ബാക്കി.`,
+          speech: `ശരി, ${customerName}-ന്റെ കണക്കിൽ ചേർത്തു. ഇനി ${r(pendingRupees)} രൂപ ബാക്കി.`,
+        },
+
+  paymentUnmatched: (amountRupees) => ({
+    text: `₹${r(amountRupees)}-ന്റെ payment വന്നു, പക്ഷേ അതിന്റെ entry നേരത്തേ തീർന്നതാണ്. മാറ്റിവെച്ചു.`,
+    speech: `${r(amountRupees)} രൂപയുടെ payment വന്നു, പക്ഷേ അതിന്റെ entry നേരത്തേ തീർന്നതാണ്. മാറ്റിവെച്ചു.`,
+  }),
+
+  linkFailed: () => ({
+    text: "Paytm-ൽ link ഉണ്ടാക്കാൻ പറ്റിയില്ല. കുറച്ചു കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കൂ.",
+    speech: "Paytm-ൽ link ഉണ്ടാക്കാൻ പറ്റിയില്ല. കുറച്ചു കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കൂ.",
+  }),
+
+  qrLeftUnmatched: () => ({
+    text: "ശരി, ഈ payment മാറ്റിവെച്ചു.",
+    speech: "ശരി, ഈ payment മാറ്റിവെച്ചു.",
+  }),
+
+  notUnderstoodYesNo: () => ({
+    text: "ക്ഷമിക്കണം, മനസ്സിലായില്ല. അതെ അല്ലെങ്കിൽ ഇല്ല എന്ന് പറയൂ.",
+    speech: "ക്ഷമിക്കണം, മനസ്സിലായില്ല. അതെ അല്ലെങ്കിൽ ഇല്ല എന്ന് പറയൂ.",
+  }),
+
+  notAnEntry: () => ({
+    text: "ക്ഷമിക്കണം, മനസ്സിലായില്ല. ഇങ്ങനെ പറയൂ: രാജൻ ചേട്ടൻ 350 രൂപയുടെ സാധനം വാങ്ങി, 200 തന്നു, 150 ബാക്കി.",
+    speech: "ക്ഷമിക്കണം, മനസ്സിലായില്ല. ഇങ്ങനെ പറയൂ: രാജൻ ചേട്ടൻ 350 രൂപയുടെ സാധനം വാങ്ങി, 200 തന്നു, 150 ബാക്കി.",
+  }),
+
+  amountsUnclear: () => ({
+    text: "തുക വ്യക്തമായി കേട്ടില്ല. ഒന്നുകൂടി പറയൂ.",
+    speech: "തുക വ്യക്തമായി കേട്ടില്ല. ഒന്നുകൂടി പറയൂ.",
+  }),
+};

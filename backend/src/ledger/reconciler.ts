@@ -5,7 +5,8 @@ import type { Actor, Payment } from "../db/types.js";
 import type { EventBus } from "../events/bus.js";
 import { AppError, notFound } from "../helpers/errors.js";
 import type { Logger } from "../helpers/logger.js";
-import { lines } from "../llm/readback.js";
+import type { MerchantLanguages } from "../languages.js";
+import { linesFor, type Lines } from "../llm/lines/index.js";
 import type { PaytmPaymentNotice } from "../paytm/client.js";
 import { nameSimilarity } from "./names.js";
 import { applyPayment, getEntry, inTx, listEntries, type Db, type EntryWithCustomer } from "./repository.js";
@@ -25,8 +26,13 @@ export class Reconciler {
   constructor(
     private readonly db: Db,
     private readonly events: EventBus,
+    private readonly languages: MerchantLanguages,
     private readonly logger?: Logger,
   ) {}
+
+  private async say(merchantId: string): Promise<Lines> {
+    return linesFor(await this.languages.get(merchantId));
+  }
 
   /** Paytm link callback: exact match by the link's order reference, no guessing. */
   async handleLinkPayment(notice: PaytmPaymentNotice): Promise<LinkPaymentOutcome> {
@@ -100,7 +106,7 @@ export class Reconciler {
       const payment = await this.getPayment(link.merchant_id, outcome.paymentId);
       this.events.publish(link.merchant_id, {
         type: "pari.announce",
-        line: lines.paymentUnmatched(toRupees(payment.amount_paise)),
+        line: (await this.say(link.merchant_id)).paymentUnmatched(toRupees(payment.amount_paise)),
       });
     }
     return outcome;
@@ -134,7 +140,8 @@ export class Reconciler {
     if (candidates.length) {
       this.events.publish(merchantId, { type: "payment.suggested", suggestion });
     } else {
-      this.events.publish(merchantId, { type: "pari.announce", line: lines.qrNoCandidate(toRupees(input.amountPaise)) });
+      const line = (await this.say(merchantId)).qrNoCandidate(toRupees(input.amountPaise));
+      this.events.publish(merchantId, { type: "pari.announce", line });
     }
     return suggestion;
   }
@@ -246,7 +253,7 @@ export class Reconciler {
     return {
       payment: toPaymentDto(payment),
       entry: toEntryDto(entry),
-      line: lines.qrMatched(entry.customer_name, toRupees(entry.pending_paise)),
+      line: (await this.say(merchantId)).qrMatched(entry.customer_name, toRupees(entry.pending_paise)),
     };
   }
 
@@ -264,22 +271,26 @@ export class Reconciler {
       await this.getPayment(merchantId, paymentId);
       throw new AppError(409, "PAYMENT_RESOLVED", "Payment is already resolved");
     }
-    return { payment: toPaymentDto(updated), line: lines.qrLeftUnmatched() };
+    return { payment: toPaymentDto(updated), line: (await this.say(merchantId)).qrLeftUnmatched() };
   }
 
   private async publishPaymentApplied(merchantId: string, paymentId: string, entryId: string): Promise<void> {
-    const [payment, entry] = await Promise.all([this.getPayment(merchantId, paymentId), getEntry(this.db, merchantId, entryId)]);
-    this.publishEntryPaid(merchantId, payment, entry);
+    const [payment, entry, say] = await Promise.all([
+      this.getPayment(merchantId, paymentId),
+      getEntry(this.db, merchantId, entryId),
+      this.say(merchantId),
+    ]);
+    this.publishEntryPaid(merchantId, payment, entry, say);
   }
 
-  private publishEntryPaid(merchantId: string, payment: Payment, entry: EntryWithCustomer): void {
+  private publishEntryPaid(merchantId: string, payment: Payment, entry: EntryWithCustomer, say: Lines): void {
     const entryDto = toEntryDto(entry);
     this.events.publish(merchantId, { type: "entry.updated", entry: entryDto });
     this.events.publish(merchantId, {
       type: "payment.received",
       payment: toPaymentDto(payment),
       entry: entryDto,
-      line: lines.linkPaid(entry.customer_name, toRupees(payment.amount_paise), toRupees(entry.pending_paise)),
+      line: say.linkPaid(entry.customer_name, toRupees(payment.amount_paise), toRupees(entry.pending_paise)),
     });
   }
 

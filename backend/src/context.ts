@@ -3,6 +3,7 @@ import { ConversationEngine } from "./conversation/session.js";
 import type { Database } from "./db/client.js";
 import { EventBus } from "./events/bus.js";
 import type { Logger } from "./helpers/logger.js";
+import { MerchantLanguages } from "./languages.js";
 import { CollectService } from "./ledger/collect.js";
 import { Reconciler } from "./ledger/reconciler.js";
 import type { Db } from "./ledger/repository.js";
@@ -20,6 +21,7 @@ export interface AppContext {
   logger: Logger;
   database: Database;
   db: Db;
+  languages: MerchantLanguages;
   stt: SpeechToText;
   tts: TextToSpeech;
   chat: ChatModel;
@@ -40,6 +42,7 @@ export interface ContextOverrides {
 
 export function createContext(env: Env, logger: Logger, database: Database, overrides: ContextOverrides = {}): AppContext {
   const db = database.db;
+  const languages = new MerchantLanguages(db);
   const events = new EventBus();
   const stt = overrides.stt ?? new SaarasSpeechToText(env);
   const tts = new CachedTextToSpeech(overrides.tts ?? new BulbulTextToSpeech(env));
@@ -47,8 +50,8 @@ export function createContext(env: Env, logger: Logger, database: Database, over
   const paytm =
     overrides.paytm ?? (env.PARI_PAYTM_MODE === "sandbox" ? new SandboxPaytmClient(env) : new MockPaytmClient(logger));
   const extractor = new EntryExtractor(chat);
-  const reconciler = new Reconciler(db, events, logger);
-  const collect = new CollectService(db, paytm, events);
-  const conversation = new ConversationEngine({ db, extractor, reconciler, collect, events, logger });
-  return { env, logger, database, db, stt, tts, chat, extractor, paytm, events, reconciler, collect, conversation };
+  const reconciler = new Reconciler(db, events, languages, logger);
+  const collect = new CollectService(db, paytm, events, languages);
+  const conversation = new ConversationEngine({ db, extractor, reconciler, collect, events, languages, logger });
+  return { env, logger, database, db, languages, stt, tts, chat, extractor, paytm, events, reconciler, collect, conversation };
 }

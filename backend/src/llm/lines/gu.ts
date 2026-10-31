@@ -1,0 +1,139 @@
+/** Gujarati: Gujarati script on screen and for speech, with ₹ spoken as રૂપિયા. */
+import { type LineBook, phoneForDisplay, phoneForSpeech, r } from "./book.js";
+
+export const gu: LineBook = {
+  entryReadback: (e, needsReview) => {
+    const care = needsReview ? "એક વાર ધ્યાનથી સાંભળો. " : "";
+    if (e.paidRupees === 0) {
+      return {
+        text: `${care}${e.customerName}, ₹${r(e.pendingRupees)} ઉધાર. save કરું?`,
+        speech: `${care}${e.customerName}, ${r(e.pendingRupees)} રૂપિયા ઉધાર. save કરું?`,
+      };
+    }
+    if (e.pendingRupees === 0) {
+      return {
+        text: `${care}${e.customerName}, ₹${r(e.totalRupees)} નો સામાન, પૂરા ₹${r(e.paidRupees)} મળી ગયા. save કરું?`,
+        speech: `${care}${e.customerName}, ${r(e.totalRupees)} રૂપિયાનો સામાન, પૂરા ${r(e.paidRupees)} રૂપિયા મળી ગયા. save કરું?`,
+      };
+    }
+    return {
+      text: `${care}${e.customerName}, કુલ ₹${r(e.totalRupees)}, ₹${r(e.paidRupees)} મળ્યા, ₹${r(e.pendingRupees)} બાકી. save કરું?`,
+      speech: `${care}${e.customerName}, કુલ ${r(e.totalRupees)} રૂપિયા, ${r(e.paidRupees)} મળ્યા, ${r(e.pendingRupees)} બાકી. save કરું?`,
+    };
+  },
+
+  savedAskCollect: (pendingRupees) => ({
+    text: `save થઈ ગયું. ₹${r(pendingRupees)} ની payment link મોકલું?`,
+    speech: `save થઈ ગયું. ${r(pendingRupees)} રૂપિયાની payment link મોકલું?`,
+  }),
+
+  savedClosed: () => ({
+    text: "save થઈ ગયું. પૂરું payment મળી ગયું, ખાતું બંધ.",
+    speech: "save થઈ ગયું. પૂરું payment મળી ગયું, ખાતું બંધ.",
+  }),
+
+  entryRejected: () => ({
+    text: "ઠીક છે, entry cancel. ફરીથી બોલો.",
+    speech: "ઠીક છે, entry cancel. ફરીથી બોલો.",
+  }),
+
+  entryCorrected: (e, needsReview) => {
+    const base = gu.entryReadback(e, needsReview);
+    return { text: `સુધારી દીધું. ${base.text}`, speech: `સુધારી દીધું. ${base.speech}` };
+  },
+
+  askPhone: (customerName) => ({
+    text: `${customerName} નો mobile નંબર કહો.`,
+    speech: `${customerName} નો mobile નંબર કહો.`,
+  }),
+
+  phoneReadback: (phone) => ({
+    text: `${phoneForDisplay(phone)}. બરાબર છે?`,
+    speech: `${phoneForSpeech(phone)}. બરાબર છે?`,
+  }),
+
+  phoneInvalid: () => ({
+    text: "આ નંબર બરાબર નથી લાગતો. 10 આંકડાનો mobile નંબર બોલો.",
+    speech: "આ નંબર બરાબર નથી લાગતો. દસ આંકડાનો mobile નંબર બોલો.",
+  }),
+
+  phoneRetry: () => ({
+    text: "ઠીક છે, નંબર ફરીથી બોલો.",
+    speech: "ઠીક છે, નંબર ફરીથી બોલો.",
+  }),
+
+  linkSent: (customerName, amountRupees) => ({
+    text: `link મોકલી દીધી. ${customerName} ને ₹${r(amountRupees)} ની link SMS થઈ ગઈ.`,
+    speech: `link મોકલી દીધી. ${customerName} ને ${r(amountRupees)} રૂપિયાની link SMS થઈ ગઈ.`,
+  }),
+
+  collectDeclined: () => ({
+    text: "ઠીક છે, link નથી મોકલી. entry ખુલ્લી છે.",
+    speech: "ઠીક છે, link નથી મોકલી. entry ખુલ્લી છે.",
+  }),
+
+  linkPaid: (customerName, amountRupees, pendingRupees) =>
+    pendingRupees === 0
+      ? {
+          text: `${customerName} એ ₹${r(amountRupees)} આપી દીધા. ખાતું બંધ.`,
+          speech: `${customerName} એ ${r(amountRupees)} રૂપિયા આપી દીધા. ખાતું બંધ.`,
+        }
+      : {
+          text: `${customerName} એ ₹${r(amountRupees)} આપ્યા. હવે ₹${r(pendingRupees)} બાકી.`,
+          speech: `${customerName} એ ${r(amountRupees)} રૂપિયા આપ્યા. હવે ${r(pendingRupees)} રૂપિયા બાકી.`,
+        },
+
+  qrAsk: (amountRupees, customerName, pendingRupees) => {
+    const over = amountRupees > pendingRupees;
+    return {
+      text: `₹${r(amountRupees)} આવ્યા, ${customerName} ના?${over ? ` (બાકી ફક્ત ₹${r(pendingRupees)} હતા.)` : ""}`,
+      speech: `${r(amountRupees)} રૂપિયા આવ્યા, ${customerName} ના?${over ? ` બાકી ફક્ત ${r(pendingRupees)} રૂપિયા હતા.` : ""}`,
+    };
+  },
+
+  qrNoCandidate: (amountRupees) => ({
+    text: `₹${r(amountRupees)} નું QR payment આવ્યું. કોઈ ખુલ્લી entry સાથે મેળ ન ખાધો.`,
+    speech: `${r(amountRupees)} રૂપિયાનું QR payment આવ્યું. કોઈ ખુલ્લી entry સાથે મેળ ન ખાધો.`,
+  }),
+
+  qrMatched: (customerName, pendingRupees) =>
+    pendingRupees === 0
+      ? {
+          text: `ઠીક છે, ${customerName} ના ખાતામાં ઉમેરી દીધું. ખાતું બંધ.`,
+          speech: `ઠીક છે, ${customerName} ના ખાતામાં ઉમેરી દીધું. ખાતું બંધ.`,
+        }
+      : {
+          text: `ઠીક છે, ${customerName} ના ખાતામાં ઉમેરી દીધું. હવે ₹${r(pendingRupees)} બાકી.`,
+          speech: `ઠીક છે, ${customerName} ના ખાતામાં ઉમેરી દીધું. હવે ${r(pendingRupees)} રૂપિયા બાકી.`,
+        },
+
+  paymentUnmatched: (amountRupees) => ({
+    text: `₹${r(amountRupees)} નું payment આવ્યું, પણ એની entry પહેલેથી બંધ છે. અલગ રાખી દીધું.`,
+    speech: `${r(amountRupees)} રૂપિયાનું payment આવ્યું, પણ એની entry પહેલેથી બંધ છે. અલગ રાખી દીધું.`,
+  }),
+
+  linkFailed: () => ({
+    text: "Paytm પરથી link ન બની શકી. થોડી વાર પછી ફરી પ્રયત્ન કરો.",
+    speech: "Paytm પરથી link ન બની શકી. થોડી વાર પછી ફરી પ્રયત્ન કરો.",
+  }),
+
+  qrLeftUnmatched: () => ({
+    text: "ઠીક છે, આ payment અલગ રાખી દીધું.",
+    speech: "ઠીક છે, આ payment અલગ રાખી દીધું.",
+  }),
+
+  notUnderstoodYesNo: () => ({
+    text: "માફ કરજો, સમજાયું નહીં. હા કે ના બોલો.",
+    speech: "માફ કરજો, સમજાયું નહીં. હા કે ના બોલો.",
+  }),
+
+  notAnEntry: () => ({
+    text: "માફ કરજો, સમજાયું નહીં. આમ બોલો: મહેતાભાઈએ 350 રૂપિયાનો સામાન લીધો, 200 આપ્યા, 150 બાકી.",
+    speech: "માફ કરજો, સમજાયું નહીં. આમ બોલો: મહેતાભાઈએ 350 રૂપિયાનો સામાન લીધો, 200 આપ્યા, 150 બાકી.",
+  }),
+
+  amountsUnclear: () => ({
+    text: "રકમ બરાબર સંભળાઈ નહીં. ફરી એક વાર બોલો.",
+    speech: "રકમ બરાબર સંભળાઈ નહીં. ફરી એક વાર બોલો.",
+  }),
+};

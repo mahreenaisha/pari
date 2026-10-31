@@ -235,3 +235,55 @@ describe("Pari conversation (deck flow)", () => {
     expect(state.body.state).toBe("IDLE");
   });
 });
+
+describe("Pari in the merchant's language", () => {
+  const TAMIL = "முருகன் அண்ணா 350 ரூபாய்க்கு சாமான் வாங்கினாரு, 200 கொடுத்தாரு, 150 பாக்கி";
+
+  it("hears Tamil, answers from the Tamil table, and ஆமா confirms", async () => {
+    await request(t.app).patch("/api/me").set(auth).send({ language: "ta-IN" }).expect(200);
+    t.chat.set(TAMIL, entryJson("Murugan anna", 350, 200, 150));
+    t.stt.transcripts["tamil.webm"] = TAMIL;
+    const prompts: PariEventDto[] = [];
+    t.ctx.events.subscribe(t.merchantId, (e) => e.type === "pari.prompt" && prompts.push(e));
+
+    const res = await request(t.app)
+      .post("/api/converse")
+      .set(auth)
+      .field("speak", "false")
+      .attach("audio", WAV, { filename: "tamil.webm", contentType: "audio/webm" })
+      .expect(200);
+    expect(t.stt.languages).toEqual(["ta-IN"]);
+    expect(t.chat.calls[0]![0]!.content).toContain("transcript in Tamil");
+    expect(res.body.reply).toEqual({
+      text: "Murugan anna, மொத்தம் ₹350, ₹200 வந்துச்சு, ₹150 பாக்கி. save பண்ணட்டுமா?",
+      speech: "Murugan anna, மொத்தம் 350 ரூபாய், 200 வந்துச்சு, 150 பாக்கி. save பண்ணட்டுமா?",
+      language: "ta-IN",
+      key: "entryReadback",
+    });
+    const saved = await t.ctx.db.selectFrom("ledger_entries").select("language").where("id", "=", res.body.entry.id).executeTakeFirstOrThrow();
+    expect(saved.language).toBe("ta-IN");
+
+    let turn = await say("ஆமா");
+    expect(turn).toMatchObject({
+      state: "AWAITING_COLLECT_CHOICE",
+      reply: { text: "save ஆயிடுச்சு. ₹150-க்கு payment link அனுப்பட்டுமா?", language: "ta-IN", key: "savedAskCollect" },
+    });
+    turn = await say("வேண்டாம்");
+    expect(turn).toMatchObject({ state: "IDLE", reply: { key: "collectDeclined", language: "ta-IN" } });
+
+    await request(t.app).post("/api/dev/simulate/qr").set(auth).send({ amountRupees: 150, payerName: "Murugan" }).expect(201);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(prompts[0]).toMatchObject({ line: { text: "₹150 வந்திருக்கு, Murugan anna-ஓடதா?", language: "ta-IN", key: "qrAsk" } });
+    turn = await say("சரி");
+    expect(turn).toMatchObject({
+      state: "IDLE",
+      reply: { text: "சரி, Murugan anna கணக்குல சேர்த்துட்டேன். கணக்கு முடிஞ்சது.", key: "qrMatched" },
+      entry: { status: "CLOSED" },
+    });
+  });
+
+  it("keeps Hindi for a merchant who hasn't picked a language", async () => {
+    const turn = await say(DECK);
+    expect(turn.reply).toMatchObject({ language: "hi-IN", key: "entryReadback" });
+  });
+});

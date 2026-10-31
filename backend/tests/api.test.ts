@@ -1,15 +1,19 @@
 import type { AddressInfo } from "node:net";
-import { SarvamAIError } from "sarvamai";
+import { SarvamAIError, type SarvamAI } from "sarvamai";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { loadEnv } from "../src/config/env.js";
+import { LANGUAGES } from "../src/contracts/index.js";
 import { toMerchantDto } from "../src/contracts/mappers.js";
 import { seedDemoHistory } from "../src/db/seed.js";
 import { generateSignature } from "../src/paytm/checksum.js";
 import { SandboxPaytmClient } from "../src/paytm/sandbox.client.js";
-import { mapSarvamError } from "../src/sarvam/client.js";
+import { getSarvamClient, mapSarvamError } from "../src/sarvam/client.js";
 import { SarvamChatModel } from "../src/llm/sarvam-chat.js";
-import { API_KEY, createTestContext, entryJson, type TestContext } from "./helpers.js";
+import { SaarasSpeechToText } from "../src/stt/saaras.service.js";
+import { BulbulTextToSpeech, CachedTextToSpeech } from "../src/tts/bulbul.service.js";
+import { VOICES } from "../src/tts/voices.js";
+import { API_KEY, createTestContext, entryJson, FakeTts, type TestContext } from "./helpers.js";
 
 const DECK = "Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki.";
 const WAV = Buffer.alloc(4000, 1);
@@ -57,14 +61,30 @@ describe("basics", () => {
       const res = await api().options("/api/entries").set("Origin", origin).set("Access-Control-Request-Method", "GET");
       expect(res.headers["access-control-allow-origin"]).toBe(origin);
     }
+    const picker = await api().options("/api/me").set("Origin", "http://localhost:8081").set("Access-Control-Request-Method", "PATCH");
+    expect(picker.headers["access-control-allow-methods"]).toContain("PATCH");
   });
 
   it("describes the shop and what its QR carries", async () => {
     const res = await api().get("/api/me").set(auth).expect(200);
     expect(res.body).toMatchObject({ name: "Sharma General Store", upiId: null, qrPayload: "Sharma General Store" });
 
-    const withUpi = toMerchantDto({ id: "m1", name: "Sharma General Store", api_key_hash: "", created_at: new Date() }, "sharma@paytm");
-    expect(withUpi.qrPayload).toBe("upi://pay?pa=sharma@paytm&pn=Sharma%20General%20Store&cu=INR");
+    const shop = { id: "m1", name: "Sharma General Store", api_key_hash: "", language: null, created_at: new Date() };
+    expect(toMerchantDto(shop, "sharma@paytm").qrPayload).toBe("upi://pay?pa=sharma@paytm&pn=Sharma%20General%20Store&cu=INR");
+  });
+
+  it("lets the merchant pick Pari's language, Hindi until then", async () => {
+    expect((await api().get("/api/me").set(auth).expect(200)).body.language).toBeNull();
+    expect(await t.ctx.languages.get(t.merchantId)).toBe("hi-IN");
+
+    const picked = await api().patch("/api/me").set(auth).send({ language: "ta-IN" }).expect(200);
+    expect(picked.body.language).toBe("ta-IN");
+    expect((await api().get("/api/me").set(auth).expect(200)).body.language).toBe("ta-IN");
+    expect(await t.ctx.languages.get(t.merchantId)).toBe("ta-IN");
+
+    const bad = await api().patch("/api/me").set(auth).send({ language: "fr-FR" }).expect(400);
+    expect(bad.body.error.code).toBe("VALIDATION_ERROR");
+    await api().patch("/api/me").set(auth).send({ language: "hi-IN" }).expect(200);
   });
 
   it("streams TTS audio and reports per-stage timings on converse", async () => {
@@ -130,6 +150,61 @@ describe("sarvam error mapping", () => {
   it("a missing key fails with SARVAM_NOT_CONFIGURED before any request", async () => {
     const chat = new SarvamChatModel(loadEnv({ NODE_ENV: "test" }));
     await expect(chat.complete([{ role: "user", content: "hi" }])).rejects.toMatchObject({ code: "SARVAM_NOT_CONFIGURED", status: 503 });
+  });
+});
+
+describe("languages on the wire", () => {
+  const env = loadEnv({ NODE_ENV: "test", SARVAM_API_KEY: "test-sarvam-key" });
+  const client = getSarvamClient(env.SARVAM_API_KEY);
+
+  it("has a Bulbul voice for every language", () => {
+    for (const language of LANGUAGES) expect(VOICES[language].model).toMatch(/^bulbul:/);
+  });
+
+  it("asks Bulbul for the language's own voice", async () => {
+    const convert = vi
+      .spyOn(client.textToSpeech, "convert")
+      .mockResolvedValue({ audios: [Buffer.from("RIFF").toString("base64")] } satisfies SarvamAI.TextToSpeechResponse);
+    await new BulbulTextToSpeech(env).synthesize("சரி", "ta-IN");
+    await new BulbulTextToSpeech(env).synthesize("ঠিক আছে", "bn-IN");
+    expect(convert.mock.calls.map(([req]) => [req.language_code, req.model, req.speaker])).toEqual([
+      ["ta-IN", "bulbul:v3", "simran"],
+      ["bn-IN", "bulbul:v4-flash", "roopa_bn_conversational"],
+    ]);
+    convert.mockRestore();
+  });
+
+  it("tells Saaras the merchant's language", async () => {
+    const transcribe = vi
+      .spyOn(client.speechToText, "transcribe")
+      .mockResolvedValue({ transcript: "ஆமா", language_code: "ta-IN" } as SarvamAI.SpeechToTextResponse);
+    const audio = { data: WAV, filename: "a.wav", mimeType: "audio/wav" };
+    expect(await new SaarasSpeechToText(env).transcribe(audio, { language: "ta-IN" })).toEqual({ transcript: "ஆமா", languageCode: "ta-IN" });
+    expect(transcribe.mock.calls[0]![0]).toMatchObject({ language_code: "ta-IN" });
+    transcribe.mockRestore();
+  });
+
+  it("caches speech per language", async () => {
+    const inner = new FakeTts();
+    const tts = new CachedTextToSpeech(inner);
+    await tts.synthesize("OK", "en-IN");
+    await tts.synthesize("OK ", "en-IN");
+    await tts.synthesize("OK", "hi-IN");
+    expect(inner.languages).toEqual(["en-IN", "hi-IN"]);
+  });
+
+  it("speaks replies in their language, and /tts in the one asked for", async () => {
+    await api().patch("/api/me").set(auth).send({ language: "te-IN" }).expect(200);
+    const turn = await api().post("/api/converse").set(auth).send({ text: "ee roju endaga undi", speak: true }).expect(200);
+    expect(turn.body.reply).toMatchObject({ language: "te-IN", key: "notAnEntry" });
+    expect(t.tts.languages.at(-1)).toBe("te-IN");
+
+    await api().get("/api/tts/stream").query({ text: "নমস্কার", language: "bn-IN", key: API_KEY }).expect(200);
+    expect(t.tts.languages.at(-1)).toBe("bn-IN");
+    await api().post("/api/tts").set(auth).send({ text: "నమస్కారం" }).expect(200);
+    expect(t.tts.languages.at(-1)).toBe("te-IN");
+    await api().get("/api/tts/stream").query({ text: "hello", language: "xx-IN", key: API_KEY }).expect(400);
+    await api().patch("/api/me").set(auth).send({ language: "hi-IN" }).expect(200);
   });
 });
 

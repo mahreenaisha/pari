@@ -66,5 +66,6 @@ export function toMerchantDto(m: Merchant, upiId: string | undefined): MerchantD
     name: m.name,
     upiId: upiId ?? null,
     qrPayload: upiId ? `upi://pay?pa=${upiId}&pn=${encodeURIComponent(m.name)}&cu=INR` : m.name,
+    language: m.language,
   };
 }

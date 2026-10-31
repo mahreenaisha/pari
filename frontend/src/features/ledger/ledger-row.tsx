@@ -4,6 +4,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/app-text';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { env } from '@/config/env';
+import type { Strings } from '@/i18n/strings';
+import { useStrings } from '@/i18n/use-strings';
 import { formatMoney, formatTime } from '@/lib/format';
 import { simulateLinkPaid } from '@/services/demo-service';
 import type { LedgerEntry } from '@/types/ledger';
@@ -21,21 +23,22 @@ type LedgerRowProps = {
   last: boolean;
 };
 
-function describe(entry: LedgerEntry): { icon: IconName; text: string } {
+function describe(entry: LedgerEntry, { ledger }: Strings): { icon: IconName; text: string } {
   if (entry.status === 'closed') {
     const method = entry.payments.at(-1)?.method;
-    if (method === 'link') return { icon: 'closed', text: 'Closed by link' };
-    if (method === 'qr') return { icon: 'closed', text: 'Closed by QR' };
-    return { icon: 'closed', text: 'Paid in full' };
+    if (method === 'link') return { icon: 'closed', text: ledger.closedByLink };
+    if (method === 'qr') return { icon: 'closed', text: ledger.closedByQr };
+    return { icon: 'closed', text: ledger.paidInFull };
   }
-  if (entry.link?.status === 'sent') return { icon: 'link', text: 'Link sent' };
-  if (entry.paid > 0) return { icon: 'open', text: `Paid ${formatMoney(entry.paid)}` };
-  return { icon: 'open', text: 'Nothing paid yet' };
+  if (entry.link?.status === 'sent') return { icon: 'link', text: ledger.linkSent };
+  if (entry.paid > 0) return { icon: 'open', text: ledger.paid(formatMoney(entry.paid)) };
+  return { icon: 'open', text: ledger.nothingPaid };
 }
 
 export function LedgerRow({ entry, first, last }: LedgerRowProps) {
+  const strings = useStrings();
   const open = entry.status === 'open';
-  const { icon, text } = describe(entry);
+  const { icon, text } = describe(entry, strings);
 
   // Demo only: the customer pays the link, and Pari announces it like a real payment.
   const payLink =
@@ -59,7 +62,7 @@ export function LedgerRow({ entry, first, last }: LedgerRowProps) {
         <View style={styles.meta}>
           <Icon name={icon} size={13} color={open ? colors.due : colors.textTertiary} />
           <AppText variant="caption" numberOfLines={1} style={styles.metaText}>
-            {`${text} · ${formatTime(lastActivity(entry))}`}
+            {`${text} · ${formatTime(lastActivity(entry), strings.locale)}`}
           </AppText>
         </View>
       </View>
@@ -68,7 +71,7 @@ export function LedgerRow({ entry, first, last }: LedgerRowProps) {
           {formatMoney(open ? entry.pending : entry.total)}
         </AppText>
         <AppText variant="caption" color={colors.textTertiary}>
-          {open ? 'baaki' : 'paid'}
+          {open ? strings.ledger.pending : strings.ledger.settled}
         </AppText>
       </View>
       {last ? null : <View style={styles.divider} />}

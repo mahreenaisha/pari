@@ -3,10 +3,15 @@
  * verify them against what was actually said, and parse phone numbers.
  */
 
-const DEVANAGARI_DIGITS = "०१२३४५६७८९";
+/** Code point of 0 in Devanagari, Bengali, Gurmukhi, Gujarati, Odia, Tamil, Telugu, Kannada and Malayalam. */
+const INDIC_ZEROS = [0x0966, 0x09e6, 0x0a66, 0x0ae6, 0x0b66, 0x0be6, 0x0c66, 0x0ce6, 0x0d66];
 
 export function toAsciiDigits(text: string): string {
-  return text.replace(/[०-९]/g, (d) => String(DEVANAGARI_DIGITS.indexOf(d)));
+  return text.replace(/\p{Nd}/gu, (d) => {
+    const cp = d.codePointAt(0)!;
+    const zero = INDIC_ZEROS.find((z) => cp >= z && cp <= z + 9);
+    return zero === undefined ? d : String(cp - zero);
+  });
 }
 
 // Word -> value. Romanized Hindi, Devanagari Hindi and English. Words that double as

@@ -28,10 +28,10 @@
 
 ### App Interface
 
-| Voice Assistant | Open Udhar Ledger | Soundbox Settlement | Counter QR Display |
+| 11 Indic Languages | Voice Assistant | Open Udhar Ledger | Counter QR Display |
 | :---: | :---: | :---: | :---: |
-| <img src="assets/screenshots/01-voice-listen.jpeg" width="200" alt="Voice Assistant" /> | <img src="assets/screenshots/02-open-ledger.jpeg" width="200" alt="Open Udhar Ledger" /> | <img src="assets/screenshots/03-settled-ledger.jpeg" width="200" alt="Settled Ledger Entries" /> | <img src="assets/screenshots/04-counter-qr.jpeg" width="200" alt="Counter QR Code" /> |
-| <sub>Tap sky orb & speak shop talk</sub> | <sub>Active credit & Paytm SMS links</sub> | <sub>Auto-closed on incoming UPI</sub> | <sub>Instant counter collection</sub> |
+| <img src="assets/screenshots/languages.jpeg" width="200" alt="11 Indic Languages" /> | <img src="assets/screenshots/01-voice-listen.jpeg" width="200" alt="Voice Assistant" /> | <img src="assets/screenshots/02-open-ledger.jpeg" width="200" alt="Open Udhar Ledger" /> | <img src="assets/screenshots/04-counter-qr.jpeg" width="200" alt="Counter QR Code" /> |
+| <sub>Native speech & regional accents</sub> | <sub>Tap sky orb & speak shop talk</sub> | <sub>Active credit & Paytm SMS links</sub> | <sub>Instant counter collection</sub> |
 
 ---
 

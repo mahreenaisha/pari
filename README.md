@@ -15,7 +15,7 @@
 [![Sarvam AI](https://img.shields.io/badge/Sarvam%20AI-11%20Indic%20Languages-6C47FF?style=for-the-badge)](https://sarvam.ai/)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20PGlite-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/electric-sql/pglite)
 [![Paytm](https://img.shields.io/badge/Payments-Paytm%20Payment%20Links-00b9f5?style=for-the-badge)](https://developer.paytm.com/)
-[![Tests](https://img.shields.io/badge/Tests-786%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Tests](https://img.shields.io/badge/Tests-796%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 
 ---
 
@@ -106,7 +106,7 @@ cd backend && npm run pari            # Ambient voice terminal listening on hard
 ## Testing & Verification
 
 ```bash
-# Backend: 786 offline unit, state machine, and E2E mock tests
+# Backend: 796 offline unit, state machine, and E2E mock tests
 cd backend && npm test
 
 # Type-check TypeScript sources

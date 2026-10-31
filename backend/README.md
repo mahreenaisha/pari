@@ -9,7 +9,7 @@
 [![Kysely](https://img.shields.io/badge/ORM-Kysely-brightgreen?style=for-the-badge)](https://kysely.dev/)
 [![Sarvam AI](https://img.shields.io/badge/AI-Sarvam%20Cloud-6C47FF?style=for-the-badge)](https://sarvam.ai/)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20PGlite-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/electric-sql/pglite)
-[![Vitest](https://img.shields.io/badge/Tests-786%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Tests-796%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 
 <br/>
 
@@ -227,7 +227,7 @@ To test with real Paytm sandbox credentials rather than simulated payments:
 Pari features a comprehensive offline test suite with **zero external network dependency**:
 
 ```bash
-# Run 786+ unit, integration, and E2E mock tests
+# Run 796+ unit, integration, and E2E mock tests
 npm test
 
 # Type-check TypeScript sources

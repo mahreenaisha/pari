@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 import { AppError, notFound } from "../helpers/errors.js";
 import type { Actor, Customer, DB, EntryStatus, LedgerEntry, Payment, PaymentLink } from "../db/types.js";
@@ -162,6 +163,21 @@ export async function customerBalancePaise(db: Db, merchantId: string, customerI
     .where("status", "=", "OPEN")
     .executeTakeFirstOrThrow();
   return Number(row.pending);
+}
+
+/** What the whole shop is owed, and by how many customers. */
+export async function shopBalance(db: Db, merchantId: string): Promise<{ pendingPaise: number; customers: number }> {
+  const row = await db
+    .selectFrom("ledger_entries")
+    .select([
+      sql<number>`coalesce(sum(pending_paise), 0)::int`.as("pending"),
+      sql<number>`count(distinct customer_id)::int`.as("customers"),
+    ])
+    .where("merchant_id", "=", merchantId)
+    .where("status", "=", "OPEN")
+    .where("pending_paise", ">", 0)
+    .executeTakeFirstOrThrow();
+  return { pendingPaise: Number(row.pending), customers: Number(row.customers) };
 }
 
 // ------------------------------------------------------------------ entries
@@ -405,4 +421,86 @@ export async function applyPayment(
     payload: { ...payload, appliedPaise, excessPaise },
   });
   return { appliedPaise, excessPaise, closed: to === "CLOSED", pendingPaise };
+}
+
+export interface CashSettlement {
+  /** The entries the money went to, oldest first, as they are now. */
+  entries: EntryWithCustomer[];
+  /** How much of the cash went in: all of it, or what was owed. */
+  appliedPaise: number;
+  /** What the customer still owes. */
+  balancePaise: number;
+  /** Payment links that were still waiting on an entry this paid off. */
+  expiredLinks: number;
+}
+
+/**
+ * Cash a customer paid back, against their open entries oldest first. Each entry it reaches gets its own
+ * payment row, and a link still waiting on an entry it pays off is expired, so it isn't counted twice.
+ * Anything beyond what they owe is not recorded.
+ */
+export async function settleCash(
+  db: Db,
+  merchantId: string,
+  customerId: string,
+  amountPaise: number,
+  transcript: string | null,
+): Promise<CashSettlement> {
+  const reached: string[] = [];
+  let appliedPaise = 0;
+  let expiredLinks = 0;
+  await inTx(db, async (trx) => {
+    const open = await trx
+      .selectFrom("ledger_entries")
+      .select(["id", "pending_paise"])
+      .where("merchant_id", "=", merchantId)
+      .where("customer_id", "=", customerId)
+      .where("status", "=", "OPEN")
+      .orderBy("created_at", "asc")
+      .orderBy("id", "asc")
+      .forUpdate()
+      .execute();
+    let left = amountPaise;
+    for (const entry of open) {
+      if (left <= 0) break;
+      const part = Math.min(left, entry.pending_paise);
+      if (part <= 0) continue;
+      const payment = await trx
+        .insertInto("payments")
+        .values({
+          merchant_id: merchantId,
+          source: "CASH",
+          txn_id: `cash:${randomUUID()}`,
+          order_id: null,
+          amount_paise: part,
+          payer_name: null,
+          entry_id: entry.id,
+          match_status: "MATCHED",
+          resolved_at: new Date(),
+        })
+        .returning(["id", "txn_id"])
+        .executeTakeFirstOrThrow();
+      const applied = await applyPayment(trx, merchantId, entry.id, part, "merchant", {
+        paymentId: payment.id,
+        txnId: payment.txn_id,
+        source: "CASH",
+        transcript,
+      });
+      if (applied.closed) {
+        const expired = await trx
+          .updateTable("payment_links")
+          .set({ status: "EXPIRED" })
+          .where("entry_id", "=", entry.id)
+          .where("status", "=", "ACTIVE")
+          .returning("id")
+          .execute();
+        expiredLinks += expired.length;
+      }
+      reached.push(entry.id);
+      left -= part;
+    }
+    appliedPaise = amountPaise - left;
+  });
+  const entries = await Promise.all(reached.map((id) => getEntry(db, merchantId, id)));
+  return { entries, appliedPaise, balancePaise: await customerBalancePaise(db, merchantId, customerId), expiredLinks };
 }

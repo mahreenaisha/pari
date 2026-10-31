@@ -5,8 +5,8 @@
  */
 export type EntryStatus = 'unconfirmed' | 'open' | 'closed' | 'rejected';
 
-/** `counter` is what was paid when the entry was spoken, in cash or UPI. */
-export type PaymentMethod = 'counter' | 'link' | 'qr';
+/** `counter` is what was paid when the entry was spoken, in cash or UPI; `cash` is paid back later and told to Pari. */
+export type PaymentMethod = 'counter' | 'link' | 'qr' | 'cash';
 
 export type Customer = {
   id: string;

@@ -20,8 +20,11 @@ export const od: Strings = {
   listen: {
     hints: {
       IDLE: 'କିଏ କଣ ନେଲେ, ଆଉ କେତେ ଦେଲେ।',
+      AWAITING_NAME: 'କାହାର, କୁହନ୍ତୁ।',
+      AWAITING_AMOUNT: 'କେତେ, କୁହନ୍ତୁ।',
       AWAITING_CUSTOMER_CHOICE: 'ହଁ କି ନା?',
       AWAITING_ENTRY_CONFIRM: 'ହଁ, ନା, କିମ୍ବା କଣ ବଦଳାଇବାକୁ ହେବ।',
+      AWAITING_PAYMENT_CONFIRM: 'ହଁ, ନା, କିମ୍ବା କଣ ବଦଳାଇବାକୁ ହେବ।',
       AWAITING_COLLECT_CHOICE: 'ହଁ କି ନା?',
       AWAITING_PHONE: 'ଦଶଟି ଯାକ ଅଙ୍କ କୁହନ୍ତୁ।',
       AWAITING_PHONE_CONFIRM: 'ହଁ କି ନା?',
@@ -33,6 +36,7 @@ export const od: Strings = {
     example: '“ମହାନ୍ତି ବାବୁ 350 ଟଙ୍କାର ଜିନିଷ ନେଲେ, 200 UPI ରେ ଦେଲେ, 150 ବାକି”',
     sayYes: 'କିମ୍ବା ଆକାଶକୁ ଛୁଇଁ “ହଁ” କୁହନ୍ତୁ',
     sayNumber: 'ଆକାଶକୁ ଛୁଇଁ number କୁହନ୍ତୁ।',
+    sayAnswer: 'ଆକାଶକୁ ଛୁଇଁ ଉତ୍ତର ଦିଅନ୍ତୁ।',
     breakdown: (total, paid, pending) => `ମୋଟ ${total} · ଦେଲେ ${paid} · ବାକି ${pending}`,
     linkOffer: 'SMS ରେ Paytm payment link',
     linkOfferTo: (phone) => `${phone} କୁ SMS ରେ Paytm payment link`,
@@ -98,6 +102,7 @@ export const od: Strings = {
     loadFailed: 'ଖାତା load ହେଲା ନାହିଁ।',
     closedByLink: 'link ରେ ବନ୍ଦ',
     closedByQr: 'QR ରେ ବନ୍ଦ',
+    closedByCash: 'ନଗଦରେ ବନ୍ଦ',
     paidInFull: 'ପୂରା ଟଙ୍କା ଦେଲେ',
     linkSent: 'link ଗଲା',
     paid: (amount) => `${amount} ଦେଲେ`,

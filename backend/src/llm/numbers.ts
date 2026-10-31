@@ -116,7 +116,8 @@ export function extractNumbers(text: string): number[] {
       prefix = FRACTION_PREFIX[tokens[j]!]!;
       j++;
     }
-    let value: number | null = null;
+    // A bare "sau" or "hazaar" is one of them, except after digits ("3 sau" is read as written).
+    let value: number | null = MULTIPLIERS[tokens[j] ?? ""] !== undefined && !/^\d/.test(tokens[i - 1] ?? "") ? 1 : null;
     let total = 0;
     while (j < tokens.length) {
       const w = tokens[j]!;

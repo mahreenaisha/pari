@@ -19,8 +19,11 @@ export const gu: Strings = {
   listen: {
     hints: {
       IDLE: 'કોણે શું લીધું, અને કેટલા આપ્યા.',
+      AWAITING_NAME: 'કોનું છે તે બોલો.',
+      AWAITING_AMOUNT: 'કેટલા તે બોલો.',
       AWAITING_CUSTOMER_CHOICE: 'હા કે ના?',
       AWAITING_ENTRY_CONFIRM: 'હા, ના, અથવા શું બદલવું.',
+      AWAITING_PAYMENT_CONFIRM: 'હા, ના, અથવા શું બદલવું.',
       AWAITING_COLLECT_CHOICE: 'હા કે ના?',
       AWAITING_PHONE: 'દસેય આંકડા બોલો.',
       AWAITING_PHONE_CONFIRM: 'હા કે ના?',
@@ -32,6 +35,7 @@ export const gu: Strings = {
     example: '“મહેતાભાઈએ 350 રૂપિયાનો સામાન લીધો, 200 UPI થી આપ્યા, 150 બાકી”',
     sayYes: 'અથવા આકાશને અડીને “હા” બોલો',
     sayNumber: 'આકાશને અડીને number બોલો.',
+    sayAnswer: 'આકાશને અડીને જવાબ આપો.',
     breakdown: (total, paid, pending) => `કુલ ${total} · આપ્યા ${paid} · બાકી ${pending}`,
     linkOffer: 'SMS થી Paytm payment link',
     linkOfferTo: (phone) => `${phone} પર SMS થી Paytm payment link`,
@@ -97,6 +101,7 @@ export const gu: Strings = {
     loadFailed: 'ખાતું load ન થયું.',
     closedByLink: 'link થી બંધ',
     closedByQr: 'QR થી બંધ',
+    closedByCash: 'રોકડથી બંધ',
     paidInFull: 'પૂરા પૈસા આપ્યા',
     linkSent: 'link મોકલી',
     paid: (amount) => `${amount} આપ્યા`,

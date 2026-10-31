@@ -9,8 +9,11 @@ export type EntryStatusDto = 'UNCONFIRMED' | 'OPEN' | 'CLOSED' | 'REJECTED';
 
 export type ConversationState =
   | 'IDLE'
+  | 'AWAITING_NAME'
+  | 'AWAITING_AMOUNT'
   | 'AWAITING_CUSTOMER_CHOICE'
   | 'AWAITING_ENTRY_CONFIRM'
+  | 'AWAITING_PAYMENT_CONFIRM'
   | 'AWAITING_COLLECT_CHOICE'
   | 'AWAITING_PHONE'
   | 'AWAITING_PHONE_CONFIRM'
@@ -59,7 +62,7 @@ export type LinkDto = {
 
 export type PaymentDto = {
   id: string;
-  source: 'LINK' | 'QR';
+  source: 'LINK' | 'QR' | 'CASH';
   txnId: string;
   orderId: string | null;
   amountRupees: number;

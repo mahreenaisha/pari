@@ -28,6 +28,7 @@ function describe(entry: LedgerEntry, { ledger }: Strings): { icon: IconName; te
     const method = entry.payments.at(-1)?.method;
     if (method === 'link') return { icon: 'closed', text: ledger.closedByLink };
     if (method === 'qr') return { icon: 'closed', text: ledger.closedByQr };
+    if (method === 'cash') return { icon: 'closed', text: ledger.closedByCash };
     return { icon: 'closed', text: ledger.paidInFull };
   }
   if (entry.link?.status === 'sent') return { icon: 'link', text: ledger.linkSent };

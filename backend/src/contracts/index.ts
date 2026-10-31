@@ -9,8 +9,11 @@ export type EntryStatusDto = (typeof ENTRY_STATUSES)[number];
 
 export const CONVERSATION_STATES = [
   "IDLE",
+  "AWAITING_NAME",
+  "AWAITING_AMOUNT",
   "AWAITING_CUSTOMER_CHOICE",
   "AWAITING_ENTRY_CONFIRM",
+  "AWAITING_PAYMENT_CONFIRM",
   "AWAITING_COLLECT_CHOICE",
   "AWAITING_PHONE",
   "AWAITING_PHONE_CONFIRM",
@@ -125,7 +128,7 @@ export interface LinkDto {
 
 export interface PaymentDto {
   id: string;
-  source: "LINK" | "QR";
+  source: "LINK" | "QR" | "CASH";
   txnId: string;
   orderId: string | null;
   amountRupees: number;

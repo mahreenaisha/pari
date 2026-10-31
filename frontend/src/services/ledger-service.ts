@@ -1,5 +1,5 @@
-import type { EntryDto, EntryStatusDto, LedgerEntryDto, LinkDto } from '@/types/api';
-import type { EntryStatus, LedgerEntry, Payment, PaymentLink } from '@/types/ledger';
+import type { EntryDto, EntryStatusDto, LedgerEntryDto, LinkDto, PaymentDto } from '@/types/api';
+import type { EntryStatus, LedgerEntry, Payment, PaymentLink, PaymentMethod } from '@/types/ledger';
 
 import { api } from './api-client';
 
@@ -11,6 +11,8 @@ const STATUS: Record<EntryStatusDto, EntryStatus> = {
   CLOSED: 'closed',
   REJECTED: 'rejected',
 };
+
+const METHOD: Record<PaymentDto['source'], PaymentMethod> = { LINK: 'link', QR: 'qr', CASH: 'cash' };
 
 /** Only a link that is still waiting or got paid says anything about the entry. */
 export function toPaymentLink(link: LinkDto): PaymentLink | undefined {
@@ -29,7 +31,7 @@ export function toLedgerEntry(dto: EntryDto | LedgerEntryDto): LedgerEntry {
     'payments' in dto
       ? dto.payments.map((p) => ({
           amount: toPaise(p.amountRupees),
-          method: p.source === 'LINK' ? 'link' : 'qr',
+          method: METHOD[p.source],
           at: p.createdAt,
         }))
       : [];

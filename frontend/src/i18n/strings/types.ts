@@ -36,6 +36,8 @@ export type Strings = {
     /** Footnote under a yes/no question. */
     sayYes: string;
     sayNumber: string;
+    /** Footnote under a question asking for a name or an amount. */
+    sayAnswer: string;
     breakdown: (total: string, paid: string, pending: string) => string;
     linkOffer: string;
     linkOfferTo: (phone: string) => string;
@@ -93,6 +95,7 @@ export type Strings = {
     loadFailed: string;
     closedByLink: string;
     closedByQr: string;
+    closedByCash: string;
     paidInFull: string;
     linkSent: string;
     paid: (amount: string) => string;

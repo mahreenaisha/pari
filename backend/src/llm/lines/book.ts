@@ -22,6 +22,19 @@ export interface EntryAmounts {
   pendingRupees: number;
 }
 
+/** Money a customer paid back, as it will be recorded. */
+export interface RepaymentAmounts {
+  customerName: string;
+  /** What goes into the khaata: what was paid, or what was owed if they paid more. */
+  amountRupees: number;
+  /** What they owed before paying. */
+  owedRupees: number;
+  /** What they still owe after it. */
+  leftRupees: number;
+  /** Paid beyond what was owed, to hand back. */
+  changeRupees: number;
+}
+
 export interface LineBook {
   entryReadback(e: EntryAmounts, needsReview: boolean): Said;
   savedAskCollect(pendingRupees: number): Said;
@@ -56,4 +69,21 @@ export interface LineBook {
   unsaved(customerNames: string): Said;
   /** The answer sounded like a change that couldn't be read; comes before the read-back again. */
   changeUnclear(): Said;
+  /** An entry or repayment was said without saying whose. */
+  askName(): Said;
+  /** A customer's entry or repayment was said without an amount. */
+  askAmount(customerName: string): Said;
+  /** Money paid back, before it's saved: what will be left, or that the khaata closes and what to hand back. */
+  repaymentReadback(p: RepaymentAmounts, needsReview: boolean): Said;
+  repaymentCorrected(p: RepaymentAmounts, needsReview: boolean): Said;
+  repaymentSaved(customerName: string, leftRupees: number, changeRupees: number): Said;
+  /** The cash paid off an entry whose payment link is still out, and a sent link can't be called back. */
+  linkStillOut(customerName: string): Said;
+  /** Before cash is recorded: the same amount came in on the QR and isn't in any khaata yet. */
+  qrSameMoney(customerName: string, amountRupees: number): Said;
+  noSuchCustomer(customerName: string): Said;
+  nothingOwed(customerName: string): Said;
+  customerOwes(customerName: string, pendingRupees: number): Said;
+  shopOwed(pendingRupees: number, customers: number): Said;
+  nobodyOwes(): Said;
 }

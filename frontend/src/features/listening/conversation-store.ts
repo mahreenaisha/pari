@@ -62,7 +62,7 @@ export function announce(line: Line, entry?: LedgerEntry) {
 
 /** A QR payment was settled by tap. If Pari had asked about it aloud, the server has dropped that question. */
 export async function settleByTap(line: Line, entry?: LedgerEntry) {
-  if (turn.state === 'AWAITING_QR_MATCH') {
+  if (turn.state === 'AWAITING_QR_MATCH' || turn.reply?.key === 'qrSameMoney') {
     const { state } = await fetchConversationState();
     if (state === 'IDLE') {
       showTurn({ state: 'IDLE', reply: line, entry });

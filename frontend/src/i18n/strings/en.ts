@@ -19,8 +19,11 @@ export const en: Strings = {
   listen: {
     hints: {
       IDLE: 'Who bought what, and how much they paid.',
+      AWAITING_NAME: 'Say whose it is.',
+      AWAITING_AMOUNT: 'Say how much.',
       AWAITING_CUSTOMER_CHOICE: 'Yes or no?',
       AWAITING_ENTRY_CONFIRM: 'Yes, no, or what to change.',
+      AWAITING_PAYMENT_CONFIRM: 'Yes, no, or what to change.',
       AWAITING_COLLECT_CHOICE: 'Yes or no?',
       AWAITING_PHONE: 'Say the ten digits.',
       AWAITING_PHONE_CONFIRM: 'Yes or no?',
@@ -32,6 +35,7 @@ export const en: Strings = {
     example: '“Gupta ji bought goods for 350, paid 200 by UPI, 150 pending”',
     sayYes: 'Or tap the sky and say “yes”',
     sayNumber: 'Tap the sky and say the number.',
+    sayAnswer: 'Tap the sky and answer.',
     breakdown: (total, paid, pending) => `Total ${total} · Paid ${paid} · Pending ${pending}`,
     linkOffer: 'Paytm payment link by SMS',
     linkOfferTo: (phone) => `Paytm payment link by SMS to ${phone}`,
@@ -94,6 +98,7 @@ export const en: Strings = {
     loadFailed: 'Couldn’t load your ledger.',
     closedByLink: 'Closed by link',
     closedByQr: 'Closed by QR',
+    closedByCash: 'Closed by cash',
     paidInFull: 'Paid in full',
     linkSent: 'Link sent',
     paid: (amount) => `Paid ${amount}`,

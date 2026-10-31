@@ -20,8 +20,11 @@ export const hi: Strings = {
   listen: {
     hints: {
       IDLE: 'Who bought what, and how much they paid.',
+      AWAITING_NAME: 'Say whose it is.',
+      AWAITING_AMOUNT: 'Say how much.',
       AWAITING_CUSTOMER_CHOICE: 'Haan ya nahi?',
       AWAITING_ENTRY_CONFIRM: 'Haan, nahi, or what to change.',
+      AWAITING_PAYMENT_CONFIRM: 'Haan, nahi, or what to change.',
       AWAITING_COLLECT_CHOICE: 'Haan ya nahi?',
       AWAITING_PHONE: 'Say the ten digits.',
       AWAITING_PHONE_CONFIRM: 'Haan ya nahi?',
@@ -33,6 +36,7 @@ export const hi: Strings = {
     example: '“Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki”',
     sayYes: 'Or tap the sky and say “haan”',
     sayNumber: 'Tap the sky and say the number.',
+    sayAnswer: 'Tap the sky and answer.',
     breakdown: (total, paid, pending) => `Total ${total} · Paid ${paid} · Baaki ${pending}`,
     linkOffer: 'Paytm payment link by SMS',
     linkOfferTo: (phone) => `Paytm payment link by SMS to ${phone}`,
@@ -95,6 +99,7 @@ export const hi: Strings = {
     loadFailed: 'Couldn’t load your ledger.',
     closedByLink: 'Closed by link',
     closedByQr: 'Closed by QR',
+    closedByCash: 'Closed by cash',
     paidInFull: 'Paid in full',
     linkSent: 'Link sent',
     paid: (amount) => `Paid ${amount}`,

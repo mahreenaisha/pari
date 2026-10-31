@@ -59,6 +59,9 @@ export const MatchBody = z.union([
   z.object({ reject: z.literal(true) }),
 ]);
 
+/** "Nahi" to one suggestion of a waiting payment. */
+export const DeclineBody = z.object({ entryId: z.string().min(4) });
+
 /** `language` picks the voice; it defaults to the merchant's. */
 export const TtsBody = z.object({ text: z.string().trim().min(1).max(2500), language: language.optional() });
 

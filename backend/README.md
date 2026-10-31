@@ -180,8 +180,9 @@ All `/api` endpoints (except the signature-verified Paytm webhook) require the `
 ### Customers & Reconciliation
 * **`GET /api/customers`**: Lists all customer records.
 * **`GET /api/customers/:id/balance`**: Aggregate balance and list of open entries for a customer.
-* **`GET /api/payments/suggestions`**: Returns outstanding QR payments requiring merchant confirmation.
+* **`GET /api/payments/suggestions`**: Returns outstanding QR payments requiring merchant confirmation, plus `asking`: the payment and entry Pari is asking about aloud, so the QR tab shows the same question.
 * **`POST /api/payments/:id/match`**: Accepts (`{ entryId }`) or rejects (`{ reject: true }`) a QR candidate match.
+* **`POST /api/payments/:id/decline`**: "No" to one candidate (`{ entryId }`), answered like the spoken "nahi": neither the QR tab nor Pari offers that entry for the payment again, and the payment is kept aside once none are left.
 
 ### Real-Time Events (SSE)
 * **`GET /api/events`**: Server-Sent Events stream:

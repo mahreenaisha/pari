@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -27,14 +26,14 @@ type PaymentMatchCardProps = {
 };
 
 /**
- * Asks whether a QR payment is for its best-matching open entry; each "Nahi"
- * moves to the next suggestion until none are left.
+ * Asks whether a QR payment is for the entry Pari is asking about aloud, else its best match. "Nahi" is
+ * answered on the server like the spoken word, so the card and Pari move on to the same next suggestion.
  */
 export function PaymentMatchCard({ payment, waiting }: PaymentMatchCardProps) {
   const strings = useStrings();
-  const [index, setIndex] = useState(0);
   const resolve = useResolveQrPayment();
-  const suggestion = payment.suggestions.at(index);
+  const suggestion =
+    payment.suggestions.find((s) => s.entryId === payment.askedEntryId) ?? payment.suggestions.at(0);
   const amount = formatMoney(payment.amount);
 
   const dismiss = () => resolve.mutate({ paymentId: payment.id });
@@ -56,7 +55,7 @@ export function PaymentMatchCard({ payment, waiting }: PaymentMatchCardProps) {
         </AppText>
       </View>
 
-      <Animated.View key={index} entering={FadeIn.duration(250)} style={styles.question}>
+      <Animated.View key={suggestion?.entryId ?? 'none'} entering={FadeIn.duration(250)} style={styles.question}>
         <AppText variant="headline" style={styles.headline}>
           {suggestion ? strings.qr.ask(amount, suggestion.customerName) : strings.qr.askWhose(amount)}
         </AppText>
@@ -79,7 +78,7 @@ export function PaymentMatchCard({ payment, waiting }: PaymentMatchCardProps) {
             <PillButton
               label={strings.common.no}
               disabled={resolve.isPending}
-              onPress={() => (index + 1 < payment.suggestions.length ? setIndex(index + 1) : dismiss())}
+              onPress={() => resolve.mutate({ paymentId: payment.id, entryId: suggestion.entryId, declined: true })}
               style={styles.action}
             />
           </>

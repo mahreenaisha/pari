@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ledgerKeys } from '@/features/ledger/use-ledger';
-import { settleByTap } from '@/features/listening/conversation-store';
+import { announce } from '@/features/listening/conversation-store';
 import { toLedgerEntry } from '@/services/ledger-service';
-import { dismissQrPayment, fetchQrPayments, matchQrPayment } from '@/services/payments-service';
+import { declineQrPayment, dismissQrPayment, fetchQrPayments, matchQrPayment } from '@/services/payments-service';
 
 export const qrPaymentKeys = {
   all: ['qr-payments'] as const,
@@ -18,21 +18,26 @@ export function useQrPayments() {
 
 type Resolution = {
   paymentId: string;
-  /** The entry the merchant says this payment is for. Leave out to dismiss the payment. */
+  /** The entry the merchant says this payment is, or with `declined` isn't, for. Leave out to dismiss the payment. */
   entryId?: string;
+  declined?: boolean;
 };
+
+function resolveQrPayment({ paymentId, entryId, declined }: Resolution) {
+  if (!entryId) return dismissQrPayment(paymentId);
+  return declined ? declineQrPayment(paymentId, entryId) : matchQrPayment(paymentId, entryId);
+}
 
 export function useResolveQrPayment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ paymentId, entryId }: Resolution) =>
-      entryId ? matchQrPayment(paymentId, entryId) : dismissQrPayment(paymentId),
+    mutationFn: resolveQrPayment,
     onSuccess: async ({ line, entry }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: qrPaymentKeys.all }),
         queryClient.invalidateQueries({ queryKey: ledgerKeys.all }),
       ]);
-      await settleByTap(line, entry && toLedgerEntry(entry)).catch(() => {});
+      if (line) await announce(line, entry && toLedgerEntry(entry));
     },
   });
 }

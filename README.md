@@ -300,8 +300,9 @@ All `/api` endpoints (except the signature-verified Paytm webhook) require the `
 | `POST` | `/api/entries/:id/confirm` | Confirms (`"yes"`) or rejects (`"no"`) an entry via JSON or spoken audio. |
 | `POST` | `/api/entries/:id/collect` | Dispatches a Paytm payment link to the customer's mobile number. |
 | `GET` | `/api/customers/:id/balance` | Returns aggregate pending balance and list of open entries. |
-| `GET` | `/api/payments/suggestions` | Retrieves outstanding QR payments awaiting merchant confirmation. |
+| `GET` | `/api/payments/suggestions` | Retrieves outstanding QR payments awaiting merchant confirmation, and the one Pari is asking about aloud. |
 | `POST` | `/api/payments/:id/match` | Matches or rejects a suggested payment against an entry. |
+| `POST` | `/api/payments/:id/decline` | "No" to one suggested entry, answered like the spoken "nahi" so the QR tab and Pari move on together. |
 | `GET` | `/api/tts/stream` | Low-latency chunked audio streaming of Bulbul WAV synthesis in the chosen language. |
 | `POST` | `/api/paytm/callback` | Paytm status callback (checksum verified, public webhook). |
 | `GET` | `/health` | Healthcheck reporting database status, Paytm mode, and Sarvam connectivity. |

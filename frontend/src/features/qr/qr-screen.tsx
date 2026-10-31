@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
@@ -22,7 +23,7 @@ import { colors, screenPadding, spacing } from '@/theme';
 import { PaymentMatchCard } from './payment-match-card';
 import { QrCode } from './qr-code';
 import { useProfile } from './use-profile';
-import { useQrPayments } from './use-qr-payments';
+import { qrPaymentKeys, useQrPayments } from './use-qr-payments';
 
 /** Space kept below the orb for the name and actions; the orb is sized to fit what's left. */
 const FOOTER_HEIGHT = 144;
@@ -77,6 +78,7 @@ function MyCode({ size, covered }: { size: number; covered: boolean }) {
   const strings = useStrings();
   const { data: profile, isError, refetch } = useProfile();
   const { data: entries } = useLedgerEntries();
+  const queryClient = useQueryClient();
   const cardSize = Math.round(size * 0.6);
 
   // Demo only: a customer scans the code and pays, and Pari asks whose payment it is.
@@ -84,7 +86,9 @@ function MyCode({ size, covered }: { size: number; covered: boolean }) {
   const payQr = pending
     ? () => {
         if (process.env.EXPO_OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        simulateQrPayment(pending / 100).catch(() => {});
+        simulateQrPayment(pending / 100)
+          .then(() => queryClient.invalidateQueries({ queryKey: qrPaymentKeys.all }))
+          .catch(() => {});
       }
     : undefined;
 

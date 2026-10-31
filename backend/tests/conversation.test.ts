@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import type { ConverseResponse, PariEventDto } from "../src/contracts/index.js";
+import type { ConverseResponse, PariEventDto, SuggestionDto } from "../src/contracts/index.js";
+import type { QrQuestion } from "../src/conversation/session.js";
 import {
   API_KEY,
   balanceJson,
@@ -44,6 +45,31 @@ async function guptaOwes150(): Promise<string> {
   await say("haan");
   await say("nahi");
   return turn.entry!.id;
+}
+
+/** Sunita didi and Gupta ji both owe ₹150, so a ₹150 QR payment could be either's. */
+async function twoOwe150(): Promise<void> {
+  await say("Sunita didi 150 baaki");
+  await say("haan");
+  await say("nahi");
+  await guptaOwes150();
+}
+
+/** A customer pays on the QR. Returns the payment's id, once Pari has had the chance to ask about it. */
+async function qrPaid(amountRupees: number): Promise<string> {
+  const res = await request(t.app).post("/api/dev/simulate/qr").set(auth).send({ amountRupees }).expect(201);
+  await new Promise((r) => setTimeout(r, 50));
+  return res.body.suggestion.payment.id;
+}
+
+/** What the QR tab shows: payments waiting for a tap, and the one Pari is asking about aloud. */
+async function qrTab(): Promise<{ suggestions: SuggestionDto[]; asking: QrQuestion | null }> {
+  return (await request(t.app).get("/api/payments/suggestions").set(auth).expect(200)).body;
+}
+
+/** "Nahi" tapped on the QR tab. */
+function decline(paymentId: string, entryId: string) {
+  return request(t.app).post(`/api/payments/${paymentId}/decline`).set(auth).send({ entryId });
 }
 
 describe("Pari conversation (deck flow)", () => {
@@ -232,6 +258,94 @@ describe("Pari conversation (deck flow)", () => {
 
     const s = await request(t.app).get("/api/payments/suggestions").set(auth).expect(200);
     expect(s.body.suggestions).toHaveLength(0);
+  });
+
+  it("the QR tab shows Pari's question, and 'nahi' tapped there answers it like the spoken word", async () => {
+    const prompts: string[] = [];
+    t.ctx.events.subscribe(t.merchantId, (e) => e.type === "pari.prompt" && prompts.push(e.line.text));
+    await twoOwe150();
+    const paymentId = await qrPaid(150);
+    const { asking } = await qrTab();
+    expect(asking?.paymentId).toBe(paymentId);
+
+    expect((await decline(paymentId, asking!.entryId).expect(200)).body).toEqual({});
+    const after = await qrTab();
+    expect(after.asking?.paymentId).toBe(paymentId);
+    expect(after.asking?.entryId).not.toBe(asking!.entryId);
+    expect(after.suggestions[0]!.candidates.map((c) => c.entry.id)).toEqual([after.asking!.entryId]);
+    expect(prompts).toHaveLength(2);
+    expect(new Set(prompts)).toEqual(new Set(["₹150 aaya, Sunita didi ka?", "₹150 aaya, Gupta ji ka?"]));
+
+    expect(await say("haan")).toMatchObject({ state: "IDLE", entry: { id: after.asking!.entryId, status: "CLOSED" } });
+  });
+
+  it("a spoken 'nahi' takes that customer off the QR tab too, and the last one keeps the payment aside", async () => {
+    const prompts: PariEventDto[] = [];
+    t.ctx.events.subscribe(t.merchantId, (e) => e.type === "pari.prompt" && prompts.push(e));
+    await twoOwe150();
+    const paymentId = await qrPaid(150);
+    const first = (await qrTab()).asking!.entryId;
+
+    expect((await say("nahi")).state).toBe("AWAITING_QR_MATCH");
+    const { asking, suggestions } = await qrTab();
+    expect(asking?.entryId).not.toBe(first);
+    expect(suggestions[0]!.candidates.map((c) => c.entry.id)).toEqual([asking!.entryId]);
+
+    expect((await decline(paymentId, asking!.entryId).expect(200)).body).toEqual({});
+    expect(prompts.at(-1)).toMatchObject({ state: "IDLE", line: { text: "Theek hai, yeh payment alag rakh diya." } });
+    expect(await qrTab()).toEqual({ suggestions: [], asking: null });
+    expect((await decline(paymentId, asking!.entryId)).status).toBe(409);
+  });
+
+  it("'nahi' tapped on a payment Pari isn't asking about leaves her question in place", async () => {
+    await twoOwe150();
+    const asked = await qrPaid(150);
+    const waiting = await qrPaid(150);
+    const question = (await qrTab()).asking!;
+    expect(question.paymentId).toBe(asked);
+    const candidates = async () =>
+      (await qrTab()).suggestions.find((s) => s.payment.id === waiting)?.candidates.map((c) => c.entry.id);
+    const [first, second] = (await candidates())!;
+
+    expect((await decline(waiting, first!).expect(200)).body).toEqual({});
+    expect(await candidates()).toEqual([second]);
+    expect((await decline(waiting, second!).expect(200)).body).toMatchObject({
+      line: { text: "Theek hai, yeh payment alag rakh diya." },
+    });
+    expect(await candidates()).toBeUndefined();
+    expect((await qrTab()).asking).toEqual(question);
+
+    expect(await say("haan")).toMatchObject({ state: "IDLE", entry: { id: question.entryId, status: "CLOSED" } });
+  });
+
+  it("expires a payment link a QR payment paid off, and says not to pay it", async () => {
+    await say(DECK);
+    await say("haan");
+    await say("haan");
+    await say("9876543210");
+    const sent = await say("haan");
+    await qrPaid(150);
+
+    expect((await say("haan")).reply.text).toBe(
+      "Theek hai, Gupta ji ke khaate mein jod diya. Khaata band. Gupta ji ko bata dijiye ki ab payment link se na bharein.",
+    );
+    const link = await t.ctx.db
+      .selectFrom("payment_links")
+      .select("status")
+      .where("order_id", "=", sent.link!.orderId)
+      .executeTakeFirstOrThrow();
+    expect(link.status).toBe("EXPIRED");
+  });
+
+  it("drops the link question about an entry a QR payment just paid off", async () => {
+    const entry = await say(DECK);
+    expect((await say("haan")).state).toBe("AWAITING_COLLECT_CHOICE");
+    const paymentId = await qrPaid(150);
+    await request(t.app).post(`/api/payments/${paymentId}/match`).set(auth).send({ entryId: entry.entry!.id }).expect(200);
+
+    expect((await request(t.app).get("/api/converse/state").set(auth).expect(200)).body.state).toBe("IDLE");
+    expect((await say("haan")).reply.text).toContain("Aise boliye");
+    expect(t.paytm.sent).toHaveLength(0);
   });
 
   it("accepts audio turns and returns the transcript", async () => {

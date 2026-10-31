@@ -6,7 +6,7 @@ import type { EventBus } from "../events/bus.js";
 import { AppError, notFound } from "../helpers/errors.js";
 import type { Logger } from "../helpers/logger.js";
 import type { MerchantLanguages } from "../languages.js";
-import { linesFor, type Lines } from "../llm/lines/index.js";
+import { joinLines, linesFor, type Lines } from "../llm/lines/index.js";
 import type { PaytmPaymentNotice } from "../paytm/client.js";
 import { nameSimilarity } from "./names.js";
 import { applyPayment, getEntry, inTx, listEntries, type Db, type EntryWithCustomer } from "./repository.js";
@@ -23,6 +23,9 @@ export type LinkPaymentOutcome =
 const MIN_CANDIDATE_SCORE = 40;
 
 export class Reconciler {
+  /** Entries the merchant said a waiting payment isn't for, by payment, so neither the QR tab nor Pari offers them again. */
+  private readonly declined = new Map<string, Set<string>>();
+
   constructor(
     private readonly db: Db,
     private readonly events: EventBus,
@@ -208,19 +211,33 @@ export class Reconciler {
   }
 
   private async toSuggestion(merchantId: string, payment: Payment): Promise<SuggestionDto> {
+    const declined = this.declined.get(payment.id);
     if (payment.source === "LINK" && payment.entry_id) {
       const entry = await getEntry(this.db, merchantId, payment.entry_id);
       const candidates =
-        entry.status === "OPEN" ? [{ entry: toEntryDto(entry), score: 100, reason: "paid via this entry's link" }] : [];
+        entry.status === "OPEN" && !declined?.has(entry.id)
+          ? [{ entry: toEntryDto(entry), score: 100, reason: "paid via this entry's link" }]
+          : [];
       return { payment: toPaymentDto(payment), candidates };
     }
-    const candidates = await this.rankCandidates(merchantId, payment.amount_paise, payment.payer_name ?? undefined);
-    return { payment: toPaymentDto(payment), candidates };
+    const ranked = await this.rankCandidates(merchantId, payment.amount_paise, payment.payer_name ?? undefined);
+    return { payment: toPaymentDto(payment), candidates: ranked.filter((c) => !declined?.has(c.entry.id)) };
   }
 
-  /** Merchant confirmed "haan, Gupta ji ka". */
+  /** "Nahi" to one suggestion: the payment as it now stands, without that entry. */
+  async declineCandidate(merchantId: string, paymentId: string, entryId: string): Promise<SuggestionDto> {
+    const payment = await this.getPayment(merchantId, paymentId);
+    if (payment.match_status !== "SUGGESTED") {
+      throw new AppError(409, "PAYMENT_RESOLVED", `Payment is already ${payment.match_status}`);
+    }
+    this.declined.set(payment.id, (this.declined.get(payment.id) ?? new Set<string>()).add(entryId));
+    return this.toSuggestion(merchantId, payment);
+  }
+
+  /** Merchant confirmed "haan, Gupta ji ka". A link still out on an entry this pays off is expired, so it isn't paid twice. */
   async matchPayment(merchantId: string, paymentId: string, entryIdOrPrefix: string, actor: Actor = "merchant"): Promise<MatchResponse> {
     const entryId = (await getEntry(this.db, merchantId, entryIdOrPrefix)).id;
+    let expiredLinks = 0;
     await inTx(this.db, async (trx) => {
       const payment = await trx
         .selectFrom("payments")
@@ -233,7 +250,7 @@ export class Reconciler {
       if (payment.match_status !== "SUGGESTED" && payment.match_status !== "UNMATCHED") {
         throw new AppError(409, "PAYMENT_RESOLVED", `Payment is already ${payment.match_status}`);
       }
-      await applyPayment(trx, merchantId, entryId, payment.amount_paise, actor, {
+      const applied = await applyPayment(trx, merchantId, entryId, payment.amount_paise, actor, {
         paymentId: payment.id,
         txnId: payment.txn_id,
         source: payment.source,
@@ -245,15 +262,27 @@ export class Reconciler {
         .execute();
       if (payment.source === "LINK" && payment.order_id) {
         await trx.updateTable("payment_links").set({ status: "PAID" }).where("order_id", "=", payment.order_id).execute();
+      } else if (applied.closed) {
+        const expired = await trx
+          .updateTable("payment_links")
+          .set({ status: "EXPIRED" })
+          .where("entry_id", "=", entryId)
+          .where("status", "=", "ACTIVE")
+          .returning("id")
+          .execute();
+        expiredLinks = expired.length;
       }
     });
+    this.declined.delete(paymentId);
     const entry = await getEntry(this.db, merchantId, entryId);
     const payment = await this.getPayment(merchantId, paymentId);
     this.events.publish(merchantId, { type: "entry.updated", entry: toEntryDto(entry) });
+    const say = await this.say(merchantId);
+    const matched = say.qrMatched(entry.customer_name, toRupees(entry.pending_paise));
     return {
       payment: toPaymentDto(payment),
       entry: toEntryDto(entry),
-      line: (await this.say(merchantId)).qrMatched(entry.customer_name, toRupees(entry.pending_paise)),
+      line: expiredLinks > 0 ? joinLines(matched, say.linkStillOut(entry.customer_name)) : matched,
     };
   }
 
@@ -271,6 +300,7 @@ export class Reconciler {
       await this.getPayment(merchantId, paymentId);
       throw new AppError(409, "PAYMENT_RESOLVED", "Payment is already resolved");
     }
+    this.declined.delete(paymentId);
     return { payment: toPaymentDto(updated), line: (await this.say(merchantId)).qrLeftUnmatched() };
   }
 

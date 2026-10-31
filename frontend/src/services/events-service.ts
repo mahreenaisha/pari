@@ -6,13 +6,16 @@ import { apiUrl, authHeaders } from './api-client';
 
 const RECONNECT_MS = 2000;
 
-/** Follows the backend's server-sent events until the returned function is called, reconnecting when the stream drops. */
-export function subscribeToPariEvents(onEvent: (event: PariEventDto) => void) {
+/**
+ * Follows the backend's server-sent events until the returned function is called, reconnecting when the stream drops.
+ * `onOpen` runs on every connect, since whatever was sent while the stream was down is missed.
+ */
+export function subscribeToPariEvents(onEvent: (event: PariEventDto) => void, onOpen?: () => void) {
   const controller = new AbortController();
   void (async () => {
     while (!controller.signal.aborted) {
       try {
-        await readEvents(onEvent, controller.signal);
+        await readEvents(onEvent, controller.signal, onOpen);
       } catch {
         // Refused or dropped, e.g. while the backend restarts.
       }
@@ -22,12 +25,13 @@ export function subscribeToPariEvents(onEvent: (event: PariEventDto) => void) {
   return () => controller.abort();
 }
 
-async function readEvents(onEvent: (event: PariEventDto) => void, signal: AbortSignal) {
+async function readEvents(onEvent: (event: PariEventDto) => void, signal: AbortSignal, onOpen?: () => void) {
   const response = await fetch(apiUrl('/events'), {
     headers: { ...authHeaders, Accept: 'text/event-stream' },
     signal,
   });
   if (!response.ok || !response.body) throw new Error(`Event stream failed with ${response.status}`);
+  onOpen?.();
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();

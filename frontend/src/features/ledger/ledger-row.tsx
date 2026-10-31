@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -12,7 +13,7 @@ import type { LedgerEntry } from '@/types/ledger';
 import { colors, radii, spacing } from '@/theme';
 
 import { Avatar } from './avatar';
-import { lastActivity } from './use-ledger';
+import { lastActivity, ledgerKeys } from './use-ledger';
 
 const AVATAR = 42;
 const INSET = spacing.md;
@@ -38,6 +39,7 @@ function describe(entry: LedgerEntry, { ledger }: Strings): { icon: IconName; te
 
 export function LedgerRow({ entry, first, last }: LedgerRowProps) {
   const strings = useStrings();
+  const queryClient = useQueryClient();
   const open = entry.status === 'open';
   const { icon, text } = describe(entry, strings);
 
@@ -46,7 +48,9 @@ export function LedgerRow({ entry, first, last }: LedgerRowProps) {
     env.demoTools && open && entry.link?.status === 'sent'
       ? () => {
           if (process.env.EXPO_OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          simulateLinkPaid(entry.id).catch(() => {});
+          simulateLinkPaid(entry.id)
+            .then(() => queryClient.invalidateQueries({ queryKey: ledgerKeys.all }))
+            .catch(() => {});
         }
       : undefined;
 

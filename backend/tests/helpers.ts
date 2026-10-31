@@ -28,13 +28,39 @@ export class FakeChat implements ChatModel {
     this.calls.push(messages);
     const transcript = messages.find((m) => m.role === "user")!.content;
     const reply = this.script[transcript];
-    if (reply === undefined) return JSON.stringify({ intent: "other", customerName: null, totalRupees: null, paidRupees: null, pendingRupees: null });
+    if (reply === undefined) return JSON.stringify({ intent: "other", events: [], balanceOf: null });
     return typeof reply === "function" ? reply(transcript) : reply;
   }
 }
 
-export const entryJson = (customerName: string, total: number | null, paid: number | null, pending: number | null) =>
-  JSON.stringify({ intent: "entry", customerName, totalRupees: total, paidRupees: paid, pendingRupees: pending, items: null });
+type Amount = number | null;
+
+export const entryEvent = (customerName: string | null, total: Amount, paid: Amount, pending: Amount) => ({
+  type: "entry" as const,
+  customerName,
+  totalRupees: total,
+  paidRupees: paid,
+  pendingRupees: pending,
+  items: null,
+});
+
+export const repaymentEvent = (customerName: string | null, amount: Amount, full = false) => ({
+  type: "repayment" as const,
+  customerName,
+  amountRupees: amount,
+  full,
+});
+
+/** The model's reply for these events, in the order said. */
+export const recordJson = (...events: object[]) => JSON.stringify({ intent: "record", events, balanceOf: null });
+
+export const entryJson = (customerName: string | null, total: Amount, paid: Amount, pending: Amount) =>
+  recordJson(entryEvent(customerName, total, paid, pending));
+
+export const repaymentJson = (customerName: string | null, amount: Amount, full = false) =>
+  recordJson(repaymentEvent(customerName, amount, full));
+
+export const balanceJson = (customerName: string | null) => JSON.stringify({ intent: "balance", events: [], balanceOf: customerName });
 
 /** Audio files are "transcribed" by looking up their filename. */
 export class FakeStt implements SpeechToText {

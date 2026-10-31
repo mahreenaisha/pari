@@ -6,7 +6,7 @@ type MutableTimestamp = ColumnType<Date, Date | undefined, Date>;
 
 export type EntryStatus = "UNCONFIRMED" | "OPEN" | "CLOSED" | "REJECTED";
 export type LinkStatus = "ACTIVE" | "PAID" | "EXPIRED" | "FAILED";
-export type PaymentSource = "LINK" | "QR";
+export type PaymentSource = "LINK" | "QR" | "CASH";
 export type MatchStatus = "MATCHED" | "SUGGESTED" | "UNMATCHED" | "REJECTED";
 export type Actor = "merchant" | "paytm" | "system";
 

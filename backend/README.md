@@ -9,7 +9,7 @@
 [![Kysely](https://img.shields.io/badge/ORM-Kysely-brightgreen?style=for-the-badge)](https://kysely.dev/)
 [![Sarvam AI](https://img.shields.io/badge/AI-Sarvam%20Cloud-6C47FF?style=for-the-badge)](https://sarvam.ai/)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20PGlite-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/electric-sql/pglite)
-[![Vitest](https://img.shields.io/badge/Tests-468%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Tests-786%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 
 <br/>
 
@@ -22,7 +22,7 @@
 ## 📌 Overview
 
 The Pari backend is an Express 5 + TypeScript service that provides:
-1. **Conversational Engine**: Serialized, per-merchant state machine managing spoken interactions without race conditions.
+1. **Conversational Engine**: Serialized, per-merchant state machine managing spoken interactions without race conditions. Supports udhar credit entries, cash repayments at the counter (*"Gupta ji ne 100 diye"*), balance queries (*"Gupta ji ka kitna baaki hai?"*), and customer disambiguation (*"Gupta didi"* vs *"Gupta ji"*).
 2. **Sarvam AI Voice Pipeline**: Multi-turn speech-to-text (`saaras:v4`), 105B parameter LLM entity extraction (`sarvam-105b-conversations`), and chunked low-latency text-to-speech (`bulbul:v4-flash` / `bulbul:v3`).
 3. **Deterministic Financial Core**: Strict mathematical invariant validation ($Total = Paid + Pending$) and vernacular number parsing (*sau*, *hazaar*, *dedh*, *dhai*, Indic script digits).
 4. **Paytm Payment Settlement**: Automatic SMS payment link generation and dual-channel reconciliation (exact order IDs vs heuristic counter QR payments).
@@ -40,7 +40,7 @@ The Pari backend is an Express 5 + TypeScript service that provides:
   * **Embedded PGlite** (WASM-based local PostgreSQL without any daemon dependencies).
 * **AI & Voice**: Official `sarvamai` SDK for Saaras STT, Sarvam 105B LLM, and Bulbul TTS.
 * **Payments**: Paytm Payment Links API (`paytmchecksum` HMAC-SHA256 signature verification).
-* **Testing**: Vitest test runner (468+ tests, mocks for network/audio).
+* **Testing**: Vitest test runner (786+ tests, mocks for network/audio).
 
 ---
 
@@ -223,7 +223,7 @@ To test with real Paytm sandbox credentials rather than simulated payments:
 Pari features a comprehensive offline test suite with **zero external network dependency**:
 
 ```bash
-# Run 468+ unit, integration, and E2E mock tests
+# Run 786+ unit, integration, and E2E mock tests
 npm test
 
 # Type-check TypeScript sources
@@ -238,6 +238,8 @@ The test suite validates:
 * Spoken 10-digit Indian mobile parsing across all 11 languages.
 * Line table accuracy and completeness for every supported language.
 * Strict accounting invariants ($Total = Paid + Pending$).
+* Cash repayments paid at the counter, applied to oldest entries first.
+* Spoken balance inquiries across single customers and shop totals.
 * Per-merchant session locks and race-condition resistance.
 * Reconciler exact and heuristic matching scoring.
 * Full E2E flow from audio capture to database settlement.

@@ -19,7 +19,11 @@ export const mr: Strings = {
   listen: {
     hints: {
       IDLE: 'कोणी काय घेतलं, आणि किती दिले.',
+      AWAITING_NAME: 'कोणाचं ते सांगा.',
+      AWAITING_AMOUNT: 'किती ते सांगा.',
+      AWAITING_CUSTOMER_CHOICE: 'हो की नाही?',
       AWAITING_ENTRY_CONFIRM: 'हो, नाही, किंवा काय बदलायचं.',
+      AWAITING_PAYMENT_CONFIRM: 'हो, नाही, किंवा काय बदलायचं.',
       AWAITING_COLLECT_CHOICE: 'हो की नाही?',
       AWAITING_PHONE: 'दहाही अंक सांगा.',
       AWAITING_PHONE_CONFIRM: 'हो की नाही?',
@@ -31,6 +35,7 @@ export const mr: Strings = {
     example: '“पाटील काकांनी 350 रुपयांचं सामान घेतलं, 200 UPI ने दिले, 150 बाकी”',
     sayYes: 'किंवा आकाशाला स्पर्श करून “हो” म्हणा',
     sayNumber: 'आकाशाला स्पर्श करून number सांगा.',
+    sayAnswer: 'आकाशाला स्पर्श करून उत्तर सांगा.',
     breakdown: (total, paid, pending) => `एकूण ${total} · दिले ${paid} · बाकी ${pending}`,
     linkOffer: 'SMS ने Paytm payment link',
     linkOfferTo: (phone) => `${phone} वर SMS ने Paytm payment link`,
@@ -96,6 +101,7 @@ export const mr: Strings = {
     loadFailed: 'खातं load झालं नाही.',
     closedByLink: 'link ने बंद',
     closedByQr: 'QR ने बंद',
+    closedByCash: 'रोखीने बंद',
     paidInFull: 'पूर्ण पैसे दिले',
     linkSent: 'link पाठवली',
     paid: (amount) => `${amount} दिले`,

@@ -183,7 +183,6 @@ describe("languages on the wire", () => {
     expect(transcribe.mock.calls[0]![0]).toMatchObject({ language_code: "ta-IN" });
     transcribe.mockRestore();
   });
-
   it("caches speech per language", async () => {
     const inner = new FakeTts();
     const tts = new CachedTextToSpeech(inner);

@@ -5,9 +5,9 @@ import type { AppContext } from "../context.js";
 import { merchantId } from "../helpers/auth.js";
 import { AppError } from "../helpers/errors.js";
 import { audioFromRequest, audioUpload, boolField } from "../helpers/upload.js";
-import { assertExtractionEntry } from "../llm/extractor.js";
+import { firstEntry, KNOWN_CUSTOMERS } from "../llm/extractor.js";
 import { linesFor } from "../llm/lines/index.js";
-import { createUnconfirmedEntry, findOrCreateCustomer, listCustomers } from "../ledger/repository.js";
+import { createUnconfirmedEntry, findOrCreateCustomer, knownCustomerNames } from "../ledger/repository.js";
 import { toPaise } from "../ledger/state.js";
 
 /** Single-shot entry creation, for clients that drive the confirm step themselves. */
@@ -30,35 +30,29 @@ export function voiceRoutes(ctx: AppContext): Router {
       speak = body.speak;
     }
 
-    const customers = await listCustomers(ctx.db, mid);
-    const result = await ctx.extractor.extract(
-      transcript,
-      customers.map((c) => c.name),
-      language,
-    );
-    assertExtractionEntry(result);
-    const { customer } = await findOrCreateCustomer(ctx.db, mid, result.extraction.customerName);
+    const heard = firstEntry(await ctx.extractor.extract(transcript, await knownCustomerNames(ctx.db, mid, KNOWN_CUSTOMERS), language));
+    const { customer } = await findOrCreateCustomer(ctx.db, mid, heard.extraction.customerName);
     const entry = await createUnconfirmedEntry(ctx.db, {
       merchantId: mid,
       customerId: customer.id,
-      totalPaise: toPaise(result.extraction.totalRupees),
-      paidPaise: toPaise(result.extraction.paidRupees),
-      pendingPaise: toPaise(result.extraction.pendingRupees),
+      totalPaise: toPaise(heard.extraction.totalRupees),
+      paidPaise: toPaise(heard.extraction.paidRupees),
+      pendingPaise: toPaise(heard.extraction.pendingRupees),
       transcript,
       language,
-      needsReview: result.needsReview,
+      needsReview: heard.needsReview,
     });
     const dto = toEntryDto(entry);
     const readback = linesFor(language).entryReadback(
       { customerName: dto.customer.name, totalRupees: dto.totalRupees, paidRupees: dto.paidRupees, pendingRupees: dto.pendingRupees },
-      result.needsReview,
+      heard.needsReview,
     );
     const body: VoiceEntryResponse = {
       transcript,
       entry: dto,
       readback,
-      needsReview: result.needsReview,
-      unverifiedFields: result.unverifiedFields,
+      needsReview: heard.needsReview,
+      unverifiedFields: heard.unverifiedFields,
     };
     if (speak) body.readbackAudio = (await ctx.tts.synthesize(readback.speech, readback.language)).toString("base64");
     res.status(201).json(body);

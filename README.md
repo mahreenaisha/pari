@@ -3,7 +3,7 @@
 # 🧚‍♀️ Pari (परी)
 ### Ambient Voice-First Udhar Ledger & Automated Paytm Settlement for Indian Kirana Stores
 
-*Bridging vernacular shopkeeper speech and digital commerce with zero-hallucination accounting, 11 Indian languages, and proactive UPI reconciliation.*
+*Bridging vernacular shopkeeper speech and digital commerce with zero-hallucination accounting, 11 Indian languages, cash repayments, and proactive UPI reconciliation.*
 
 <br/>
 
@@ -15,7 +15,7 @@
 [![Sarvam AI](https://img.shields.io/badge/AI-Sarvam%20Cloud-6C47FF?style=for-the-badge)](https://sarvam.ai/)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20PGlite-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/electric-sql/pglite)
 [![Paytm](https://img.shields.io/badge/Payments-Paytm%20Payment%20Links-00b9f5?style=for-the-badge)](https://developer.paytm.com/)
-[![Tests](https://img.shields.io/badge/Tests-468%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Tests](https://img.shields.io/badge/Tests-786%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 
 <br/>
 
@@ -29,12 +29,12 @@
 
 In India's retail ecosystem, hundreds of millions of daily transactions across neighbourhood **kirana** (mom-and-pop grocery) stores operate on **udhar** (informal customer credit). Traditionally, merchants track this credit on dog-eared paper notebooks (*bahi-khata*) or struggle with bookkeeping mobile apps that demand tedious manual typing while managing a crowded, noisy counter.
 
-**Pari (परी)** is an ambient, voice-first intelligent financial assistant that turns natural shopkeeper speech into verified ledger entries and automated payment links:
+**Pari (परी)** is an ambient, voice-first intelligent financial assistant that turns natural shopkeeper speech into verified ledger entries, cash repayments, and automated payment recovery:
 
 1. **Speak Naturally**: The merchant selects one of **11 Indian languages** once, then speaks shop vernacular mixed with English (*"Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki"*).
-2. **Deterministic Extraction & Guardrails**: Pari extracts the entities via Sarvam AI, enforces strict mathematical invariants ($Total = Paid + Pending$), and verifies extracted numbers against the raw transcript before reading back a spoken confirmation.
+2. **Deterministic Extraction & Guardrails**: Pari extracts financial entities via Sarvam AI, enforces strict mathematical invariants ($Total = Paid + Pending$), and verifies extracted numbers against the raw transcript before reading back a spoken confirmation.
 3. **Automated Paytm Payment Links**: Once confirmed, Pari offers to dispatch an SMS payment link via Paytm for the pending amount.
-4. **Intelligent Dual-Channel Settlement**: The ledger automatically settles when the customer pays via the SMS link, or proactively alerts the merchant when a matching payment hits the shop's counter QR code (*"₹150 aaya, Gupta ji ka?"*).
+4. **Intelligent Dual-Channel Settlement & Cash Repayments**: The ledger automatically settles when the customer pays via the SMS link, or proactively alerts the merchant when a matching payment hits the shop's counter QR code (*"₹150 aaya, Gupta ji ka?"*). Cash paid back at the counter is simply spoken aloud (*"Gupta ji ne 100 diye"*), and Pari can instantly answer what anyone owes (*"Gupta ji ka kitna baaki hai?"* or *"kul kitna udhaar hai?"*).
 
 ---
 
@@ -56,7 +56,7 @@ flowchart TD
 
     subgraph AIEngine["🧠 Sarvam AI Indic Intelligence Pipeline"]
         STT["Speech-to-Text: saaras:v4<br/>(Code-mixed Indic STT + Merchant Language)"]
-        LLM["Extraction: sarvam-105b-conversations<br/>(105B MoE Model with Strict JSON Schema)"]
+        LLM["Extraction: sarvam-105b-conversations<br/>(105B MoE Model with Strict Multi-Event JSON Schema)"]
         TTS["Text-to-Speech: bulbul:v4-flash / v3<br/>(Language-Specific Female Persona, Cached Streaming)"]
     end
 
@@ -85,8 +85,8 @@ flowchart TD
     Engine -->|Spoken Audio Chunk| STT
     STT -->|Raw Transcript| Engine
     Engine -->|Transcript + Known Customers| LLM
-    LLM -->|Raw Extracted JSON| Guardrails
-    Guardrails -->|Verified Financial Entry| Engine
+    LLM -->|Raw Extracted JSON Schema| Guardrails
+    Guardrails -->|Verified Financial Entry / Repayment| Engine
 
     Engine --> DB
     Engine -->|Pre-composed Speech Text| TTS
@@ -108,12 +108,12 @@ flowchart TD
 
 ### A. Ambient Voice & Indic LLM Pipeline (Sarvam AI)
 * **Speech-to-Text (`saaras:v4`)**:
-  * Operates in `codemix` mode configured with the merchant's chosen language code (e.g. `hi-IN`, `ta-IN`).
-  * Conditioned with customer names and domain keywords to prevent phonetic misrecognition.
+  * Operates in `codemix` mode configured with the merchant's chosen language code (e.g. `hi-IN`, `ta-IN`), ensuring accurate transcription even for one-word answers like *"haan"*.
+  * Injected with `"Pari"` as a keyterm. Customer names are deliberately omitted from keyterms: empirical tests showed that injecting customer lists caused Saaras to erroneously substitute existing names for new customers.
 * **Large Language Model (`sarvam-105b-conversations`)**:
   * A **105-Billion parameter Mixture-of-Experts (MoE)** foundation model built specifically for Indian languages.
-  * Running at temperature `0.1` with strict JSON schema enforcement to eliminate hallucinatory conversational drift.
-  * Understands Indian colloquial honorifics (*ji*, *bhai*, *didi*, *anna*, *garu*), idioms, and code-mixed vernacular expressions.
+  * Running at temperature `0.1` with strict multi-event JSON schema enforcement.
+  * Understands Indian colloquial honorifics (*ji*, *bhai*, *didi*, *anna*, *garu*), idioms, code-mixed vernacular expressions, and multi-sentence utterances (*"Gupta ji ne 100 diye aur Verma ji ne 200 ka samaan liya"*).
 * **Text-to-Speech (Bulbul)**:
   * Employs authentic female personas across all 11 languages (operating at a crisp `1.15x` pace).
   * **Two-Tier Latency Optimization**: Pre-synthesized LRU in-memory audio caching for static readbacks (*"Save ho gaya"*, *"Theek hai, number dobara boliye"*) and chunked HTTP streaming for $<500\text{ms}$ time-to-first-audio.
@@ -121,15 +121,27 @@ flowchart TD
 ### B. Zero-Hallucination Deterministic Financial Core
 Financial records demand mathematical precision. Pari enforces a complete boundary between **probabilistic speech extraction** and **deterministic financial execution**:
 
-1. **Extraction Separation**: The LLM is strictly constrained to output structured JSON:
+1. **Extraction Separation**: The LLM maps raw phrases to structured multi-event JSON schema, including entries, repayments, and balance queries:
    ```json
    {
-     "intent": "entry",
-     "customerName": "Gupta ji",
-     "totalRupees": 350,
-     "paidRupees": 200,
-     "pendingRupees": 150,
-     "items": null
+     "intent": "record",
+     "events": [
+       {
+         "type": "entry",
+         "customerName": "Gupta ji",
+         "totalRupees": 350,
+         "paidRupees": 200,
+         "pendingRupees": 150,
+         "items": null
+       },
+       {
+         "type": "repayment",
+         "customerName": "Verma ji",
+         "amountRupees": 100,
+         "full": false
+       }
+     ],
+     "balanceOf": null
    }
    ```
 2. **Vernacular Number & Fraction Parser (`numbers.ts`)**:
@@ -138,9 +150,10 @@ Financial records demand mathematical precision. Pari enforces a complete bounda
      * *dedh* ($1.5\times$), *dhai* ($2.5\times$), *saade* ($+0.5$), *sava* ($+0.25$), *paune* ($-0.25$).
      * e.g., *"saade teen sau"* $\rightarrow 350$, *"dedh sau"* $\rightarrow 150$.
    * Parses spoken 10-digit Indian mobile numbers (Devanagari, Tamil, Bengali, Telugu, and other Indic script digits, digit words across all 11 languages, and colloquial repeats like *"double nine"*).
-3. **Formal Invariant Verification**:
+3. **Formal Invariant Verification & Corrections**:
    * Automatically derives single missing values ($Total = Paid + Pending$).
    * Formally checks with `checkAmountsAgainstTranscript()` that every non-zero quantity was explicitly spoken in the audio or derived mathematically. Unverified entries are tagged with `needsReview: true`.
+   * Accepts voice corrections at the readback stage (e.g. *"Nahi, 250 diye"* or *"Haan, lekin 250 diye"*).
 4. **Pre-composed Line Tables (`lines/`)**:
    * LLMs are never permitted to construct spoken read-back sentences. All response strings are sourced directly from typed language tables with amounts and names interpolated safely.
 
@@ -177,11 +190,26 @@ Every merchant session is protected by a serialized mutex lock preventing race c
 stateDiagram-v2
     [*] --> IDLE
 
-    IDLE --> AWAITING_ENTRY_CONFIRM: Merchant utters credit entry
-    AWAITING_ENTRY_CONFIRM --> AWAITING_ENTRY_CONFIRM: Merchant corrects amounts ("Nahi, 250 diye")
+    IDLE --> AWAITING_CUSTOMER_CHOICE: Name ambiguity ("Gupta didi" for Gupta ji)
+    AWAITING_CUSTOMER_CHOICE --> AWAITING_ENTRY_CONFIRM: Same person ("Haan") or a new khaata ("Nahi")
+
+    IDLE --> AWAITING_ENTRY_CONFIRM: Merchant utters udhar entry
+    AWAITING_ENTRY_CONFIRM --> AWAITING_ENTRY_CONFIRM: Merchant corrects amounts ("Nahi, 250 diye" or "Haan, lekin 250 diye")
+    AWAITING_ENTRY_CONFIRM --> AWAITING_ENTRY_CONFIRM: Someone else's entry queued; this one asked again
     AWAITING_ENTRY_CONFIRM --> IDLE: Merchant rejects ("Nahi / Galat")
     AWAITING_ENTRY_CONFIRM --> IDLE: Confirmed & Fully Paid (Pending = 0)
     AWAITING_ENTRY_CONFIRM --> AWAITING_COLLECT_CHOICE: Confirmed & Pending > 0 ("Save karoon? -> Haan")
+
+    IDLE --> IDLE: Balance question answered ("Gupta ji ka kitna baaki hai?")
+    IDLE --> AWAITING_NAME: Missing customer name ("200 ka saamaan diya")
+    IDLE --> AWAITING_AMOUNT: Missing amount ("Gupta ji ne paise diye")
+    AWAITING_NAME --> AWAITING_ENTRY_CONFIRM: Name supplied ("Verma ji")
+    AWAITING_AMOUNT --> AWAITING_PAYMENT_CONFIRM: Amount supplied ("Dedh sau")
+
+    IDLE --> AWAITING_PAYMENT_CONFIRM: Cash repaid at counter ("Gupta ji ne 100 diye")
+    AWAITING_PAYMENT_CONFIRM --> IDLE: Confirmed ("Haan") -> Applied to oldest open entries
+    AWAITING_PAYMENT_CONFIRM --> AWAITING_PAYMENT_CONFIRM: Corrected ("Nahi, 150 diye")
+    AWAITING_PAYMENT_CONFIRM --> IDLE: Rejected ("Nahi") -> Nothing recorded
 
     AWAITING_COLLECT_CHOICE --> IDLE: Declines payment link ("Nahi")
     AWAITING_COLLECT_CHOICE --> IDLE: Accepts & phone already saved (Link dispatched)
@@ -205,27 +233,31 @@ stateDiagram-v2
 
 ## 6. Dual-Channel Reconciliation Engine
 
-Pari closes the cash flow loop across two distinct real-world payment channels:
+Pari closes the cash flow loop across distinct real-world payment channels:
 
 ```mermaid
 flowchart LR
     subgraph Sources["Payment Channels"]
         PL["Paytm Payment Link (SMS)"]
         QR["Shop Counter QR / Soundbox"]
+        Cash["Direct Counter Cash Repayment"]
     end
 
     subgraph ReconcilerLogic["Reconciliation Engine"]
         Exact["Exact Reference Lookup<br/>(order_id / link_id)"]
         Scorer["Fuzzy Candidate Heuristic<br/>(Score >= 40)"]
+        CashMatcher["Oldest-Entry Cash Matcher<br/>(Calculates Remaining Baaki / Change)"]
     end
 
     subgraph Actions["Ledger Resolution"]
         AutoClose["Auto-Close Entry<br/>Spoken: 'Gupta ji ne ₹150 de diye. Khaata band.'"]
         ProactiveAsk["Proactive Ambient Prompt<br/>Spoken: '₹150 aaya, Gupta ji ka?'"]
+        CashReceipt["Cash Balance Update<br/>Spoken: '₹100 mile, ab ₹200 bachega'"]
     end
 
     PL --> Exact --> AutoClose
     QR --> Scorer --> ProactiveAsk
+    Cash --> CashMatcher --> CashReceipt
 ```
 
 ### 1. Exact Link Settlement
@@ -241,6 +273,12 @@ flowchart LR
   * **Payer Name Similarity ($S_{\text{name}}$)**: Up to $+60$ based on Jaro-Winkler string distance against known customer records.
   * **Recency Decay ($S_{\text{recency}}$)**: Up to $+10$ decaying over a 30-day window.
 * Candidates scoring $\ge 40$ prompt an ambient readback: *"₹150 aaya, Gupta ji ka?"*. A simple *"Haan"* settles the account.
+
+### 3. Direct Cash Repayments & Balance Inquiries
+* Customer pays cash at the counter: *"Gupta ji ne 100 rupaye diye"*.
+* Pari computes their outstanding debt, pays off open entries starting from the oldest, and reads back the new balance: *"Gupta ji se ₹100 mile. ₹300 baaki tha, ab ₹200 bachega. Save karoon?"*
+* If the customer pays more than owed, Pari closes the debt and tells the merchant how much change to return.
+* Any inquiry like *"Gupta ji ka kitna baaki hai?"* or *"kul kitna udhaar hai?"* receives an immediate spoken calculation.
 
 ---
 
@@ -322,13 +360,13 @@ npm run pari           # Boots the ambient voice terminal listening on your syst
 
 ## 9. Mobile App & Demo Walkthrough
 
-The mobile app in [`frontend/`](frontend) is built with **Expo SDK 58** and **React Native 0.88**. It provides a reactive UI featuring an animated Skia sky orb, push-to-talk voice recording, ledger views, and shop QR simulation.
+The mobile app in [`frontend/`](frontend) is built with **Expo SDK 58** and **React Native 0.88**. It provides a reactive UI featuring an animated Skia sky orb, push-to-talk voice recording, ledger views, cash repayment indicators, and shop QR simulation.
 
 ```mermaid
 graph LR
     subgraph MobileFeatures["📱 Pyari Pari App Features"]
         Orb["🌤️ Sky Orb<br/>(Skia Shader / Push-to-Talk)"]
-        Ledger["📖 Ledger<br/>(Daily Groups / Status Chips)"]
+        Ledger["📖 Ledger<br/>(Daily Groups / Cash & Link Badges)"]
         QR["📷 Shop QR<br/>(Dynamic UPI QR / Settlement)"]
         Lang["🌐 Language<br/>(11 Native Scripts)"]
     end
@@ -355,7 +393,7 @@ npx expo run:android
 > [!IMPORTANT]
 > The app requires native microphone recording (`expo-audio`) and cleartext HTTP access (`http://localhost:4000`). Both are pre-configured in `frontend/android/app/src/main/AndroidManifest.xml` and `app.json`.
 
-### 3-Minute Demo Script
+### 4-Minute Demo Script
 
 > **Language**: Hindi (tap **हिन्दी** on initial launch or use the language chip).
 
@@ -373,15 +411,23 @@ npx expo run:android
 5. **Simulate QR Payment**: Speak a new entry (*"Verma ji ne 500 ka samaan liya, 300 diye"*), confirm it, and decline the link (*"Abhi nahi"*).
    * Open the **QR** tab and long-press the QR code.
    * Pari proactively announces: *"₹200 aaya, Verma ji ka?"*. Tap or say **"Haan"** to immediately settle and close the entry!
+6. **Cash Repayments & Balances**:
+   * Say: *"Verma ji ko 300 udhaar likh do"*, answer "Haan", then "Abhi nahi".
+   * Say: *"Verma ji ne 100 diye"*. Pari reads back: *"Verma ji se ₹100 mile. ₹300 baaki tha, ab ₹200 bachega. Save karoon?"* Answer "Haan".
+   * Ask: *"Verma ji ka kitna baaki hai?"* $\rightarrow$ Pari answers: *"Verma ji ka ₹200 baaki hai."*
+7. **Guardrails & Disambiguation**:
+   * Try saying *"Gupta didi ne 200 ka samaan liya"* $\rightarrow$ Pari asks if Gupta didi and Gupta ji are the same person.
+   * Try missing pieces (*"200 ka samaan diya"*) $\rightarrow$ Pari asks whose khaata it belongs to before saving.
+8. **Finish on the Ledger**: Review "To collect", "Collected today", and closed entries.
 
 ---
 
 ## 10. Testing & Verification
 
-The test suite covers the entire pipeline across 468+ tests with **zero external network dependency**:
+The test suite covers the entire pipeline across 786+ tests with **zero external network dependency**:
 
 ```bash
-# Run Vitest test suite (number parsing, line tables, state machines, reconciler, API)
+# Run Vitest test suite (number parsing, line tables, state machines, cash repayments, reconciler, API)
 cd backend && npm test
 
 # Type-check TypeScript sources
@@ -415,7 +461,7 @@ pyari-pari/
 │   │   ├── tts/                        # Sarvam Bulbul TTS streaming & LRU caching
 │   │   └── cli/                        # Hands-free terminal audio client (Sox / VAD)
 │   ├── docker-compose.yml              # Local PostgreSQL 16 container definition
-│   └── tests/                          # 468+ Vitest unit, state machine, and E2E tests
+│   └── tests/                          # 786+ Vitest unit, state machine, and E2E tests
 └── frontend/                           # Expo SDK 58 / React Native 0.88 Mobile App
     ├── app.json                        # Expo application config & native build plugins
     └── src/

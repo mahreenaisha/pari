@@ -136,4 +136,104 @@ export const mr: LineBook = {
     text: "रक्कम नीट ऐकू आली नाही. पुन्हा एकदा सांगा.",
     speech: "रक्कम नीट ऐकू आली नाही. पुन्हा एकदा सांगा.",
   }),
+
+  newCustomer: () => ({ text: "नवीन खातं.", speech: "नवीन खातं." }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName} आणि ${knownName} एकच आहेत का?`,
+    speech: `${spokenName} आणि ${knownName} एकच आहेत का?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName} यांची entry नंतर. आधी ही:`,
+    speech: `${nextCustomerName} यांची entry नंतर. आधी ही:`,
+  }),
+
+  nextEntry: () => ({ text: "आता पुढची entry.", speech: "आता पुढची entry." }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames} यांची entry save झाली नव्हती.`,
+    speech: `${customerNames} यांची entry save झाली नव्हती.`,
+  }),
+
+  changeUnclear: () => ({ text: "काय बदलायचं ते समजलं नाही.", speech: "काय बदलायचं ते समजलं नाही." }),
+
+  askName: () => ({ text: "कोणाच्या नावावर लिहू?", speech: "कोणाच्या नावावर लिहू?" }),
+
+  askAmount: (customerName) => ({ text: `${customerName}, किती रुपये?`, speech: `${customerName}, किती रुपये?` }),
+
+  repaymentReadback: (p, needsReview) => {
+    const care = needsReview ? "एकदा नीट ऐका. " : "";
+    if (p.changeRupees > 0) {
+      const paid = p.amountRupees + p.changeRupees;
+      return {
+        text: `${care}${p.customerName} यांनी ₹${r(paid)} दिले, पण उधार फक्त ₹${r(p.owedRupees)} होतं. खातं बंद होईल, ₹${r(p.changeRupees)} परत द्यायचे आहेत. save करू का?`,
+        speech: `${care}${p.customerName} यांनी ${r(paid)} रुपये दिले, पण उधार फक्त ${r(p.owedRupees)} रुपये होतं. खातं बंद होईल, ${r(p.changeRupees)} रुपये परत द्यायचे आहेत. save करू का?`,
+      };
+    }
+    if (p.leftRupees === 0) {
+      return {
+        text: `${care}${p.customerName} यांच्याकडून पूर्ण ₹${r(p.amountRupees)} मिळाले. खातं बंद होईल. save करू का?`,
+        speech: `${care}${p.customerName} यांच्याकडून पूर्ण ${r(p.amountRupees)} रुपये मिळाले. खातं बंद होईल. save करू का?`,
+      };
+    }
+    return {
+      text: `${care}${p.customerName} यांच्याकडून ₹${r(p.amountRupees)} मिळाले. ₹${r(p.owedRupees)} बाकी होते, आता ₹${r(p.leftRupees)} उरतील. save करू का?`,
+      speech: `${care}${p.customerName} यांच्याकडून ${r(p.amountRupees)} रुपये मिळाले. ${r(p.owedRupees)} रुपये बाकी होते, आता ${r(p.leftRupees)} रुपये उरतील. save करू का?`,
+    };
+  },
+
+  repaymentCorrected: (p, needsReview) => {
+    const base = mr.repaymentReadback(p, needsReview);
+    return { text: `दुरुस्त केलं. ${base.text}`, speech: `दुरुस्त केलं. ${base.speech}` };
+  },
+
+  repaymentSaved: (customerName, leftRupees, changeRupees) => {
+    if (leftRupees > 0) {
+      return {
+        text: `save झालं. ${customerName} यांचे आता ₹${r(leftRupees)} बाकी.`,
+        speech: `save झालं. ${customerName} यांचे आता ${r(leftRupees)} रुपये बाकी.`,
+      };
+    }
+    const back = changeRupees > 0;
+    return {
+      text: `save झालं. ${customerName} यांचं खातं बंद.${back ? ` ₹${r(changeRupees)} परत द्यायला विसरू नका.` : ""}`,
+      speech: `save झालं. ${customerName} यांचं खातं बंद.${back ? ` ${r(changeRupees)} रुपये परत द्यायला विसरू नका.` : ""}`,
+    };
+  },
+
+  linkStillOut: (customerName) => ({
+    text: `${customerName} यांना सांगा की आता payment link ने पैसे भरू नका.`,
+    speech: `${customerName} यांना सांगा की आता payment link ने पैसे भरू नका.`,
+  }),
+
+  qrSameMoney: (customerName, amountRupees) => ({
+    text: `QR वर ₹${r(amountRupees)} आले आहेत, अजून कुठल्याही खात्यात जोडले नाहीत. हे ${customerName} यांचेच आहेत का?`,
+    speech: `QR वर ${r(amountRupees)} रुपये आले आहेत, अजून कुठल्याही खात्यात जोडले नाहीत. हे ${customerName} यांचेच आहेत का?`,
+  }),
+
+  noSuchCustomer: (customerName) => ({
+    text: `${customerName} यांचं खातं सापडलं नाही.`,
+    speech: `${customerName} यांचं खातं सापडलं नाही.`,
+  }),
+
+  nothingOwed: (customerName) => ({
+    text: `${customerName} यांचं काहीच उधार बाकी नाही.`,
+    speech: `${customerName} यांचं काहीच उधार बाकी नाही.`,
+  }),
+
+  customerOwes: (customerName, pendingRupees) => ({
+    text: `${customerName} यांचे ₹${r(pendingRupees)} बाकी आहेत.`,
+    speech: `${customerName} यांचे ${r(pendingRupees)} रुपये बाकी आहेत.`,
+  }),
+
+  shopOwed: (pendingRupees, customers) => {
+    const where = customers === 1 ? "एकाच खात्यात" : `${customers} खात्यांमध्ये`;
+    return {
+      text: `एकूण ₹${r(pendingRupees)} बाकी, ${where}.`,
+      speech: `एकूण ${r(pendingRupees)} रुपये बाकी, ${where}.`,
+    };
+  },
+
+  nobodyOwes: () => ({ text: "आत्ता कोणाचंच उधार बाकी नाही.", speech: "आत्ता कोणाचंच उधार बाकी नाही." }),
 };

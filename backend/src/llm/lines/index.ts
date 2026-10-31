@@ -12,7 +12,7 @@ import { pa } from "./pa.js";
 import { ta } from "./ta.js";
 import { te } from "./te.js";
 
-export type { EntryAmounts } from "./book.js";
+export type { EntryAmounts, RepaymentAmounts } from "./book.js";
 
 const BOOKS: Record<Language, LineBook> = {
   "hi-IN": hi,

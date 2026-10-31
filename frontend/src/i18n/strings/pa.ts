@@ -19,7 +19,11 @@ export const pa: Strings = {
   listen: {
     hints: {
       IDLE: 'ਕਿਸ ਨੇ ਕੀ ਲਿਆ, ਤੇ ਕਿੰਨੇ ਦਿੱਤੇ।',
+      AWAITING_NAME: 'ਕਿਸ ਦਾ ਹੈ, ਦੱਸੋ।',
+      AWAITING_AMOUNT: 'ਕਿੰਨੇ ਹਨ, ਦੱਸੋ।',
+      AWAITING_CUSTOMER_CHOICE: 'ਹਾਂ ਜਾਂ ਨਹੀਂ?',
       AWAITING_ENTRY_CONFIRM: 'ਹਾਂ, ਨਹੀਂ, ਜਾਂ ਕੀ ਬਦਲਣਾ ਹੈ।',
+      AWAITING_PAYMENT_CONFIRM: 'ਹਾਂ, ਨਹੀਂ, ਜਾਂ ਕੀ ਬਦਲਣਾ ਹੈ।',
       AWAITING_COLLECT_CHOICE: 'ਹਾਂ ਜਾਂ ਨਹੀਂ?',
       AWAITING_PHONE: 'ਦਸੇ ਅੰਕ ਬੋਲੋ।',
       AWAITING_PHONE_CONFIRM: 'ਹਾਂ ਜਾਂ ਨਹੀਂ?',
@@ -31,6 +35,7 @@ export const pa: Strings = {
     example: '“ਗਿੱਲ ਸਾਹਿਬ ਨੇ 350 ਦਾ ਸਮਾਨ ਲਿਆ, 200 UPI ਨਾਲ ਦਿੱਤੇ, 150 ਬਾਕੀ”',
     sayYes: 'ਜਾਂ ਅਸਮਾਨ ਨੂੰ ਛੂਹ ਕੇ “ਹਾਂ” ਬੋਲੋ',
     sayNumber: 'ਅਸਮਾਨ ਨੂੰ ਛੂਹ ਕੇ number ਬੋਲੋ।',
+    sayAnswer: 'ਅਸਮਾਨ ਨੂੰ ਛੂਹ ਕੇ ਜਵਾਬ ਦਿਓ।',
     breakdown: (total, paid, pending) => `ਕੁੱਲ ${total} · ਦਿੱਤੇ ${paid} · ਬਾਕੀ ${pending}`,
     linkOffer: 'SMS ਰਾਹੀਂ Paytm payment link',
     linkOfferTo: (phone) => `${phone} ’ਤੇ SMS ਰਾਹੀਂ Paytm payment link`,
@@ -96,6 +101,7 @@ export const pa: Strings = {
     loadFailed: 'ਖਾਤਾ load ਨਹੀਂ ਹੋਇਆ।',
     closedByLink: 'link ਨਾਲ ਬੰਦ',
     closedByQr: 'QR ਨਾਲ ਬੰਦ',
+    closedByCash: 'ਨਕਦ ਨਾਲ ਬੰਦ',
     paidInFull: 'ਪੂਰੇ ਪੈਸੇ ਦਿੱਤੇ',
     linkSent: 'link ਭੇਜਿਆ',
     paid: (amount) => `${amount} ਦਿੱਤੇ`,

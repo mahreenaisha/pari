@@ -136,4 +136,104 @@ export const ml: LineBook = {
     text: "തുക വ്യക്തമായി കേട്ടില്ല. ഒന്നുകൂടി പറയൂ.",
     speech: "തുക വ്യക്തമായി കേട്ടില്ല. ഒന്നുകൂടി പറയൂ.",
   }),
+
+  newCustomer: () => ({ text: "പുതിയ കണക്ക്.", speech: "പുതിയ കണക്ക്." }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName}-ഉം ${knownName}-ഉം ഒരാൾ തന്നെയാണോ?`,
+    speech: `${spokenName}-ഉം ${knownName}-ഉം ഒരാൾ തന്നെയാണോ?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName}-ന്റെ entry അടുത്തത്. ആദ്യം ഇത്:`,
+    speech: `${nextCustomerName}-ന്റെ entry അടുത്തത്. ആദ്യം ഇത്:`,
+  }),
+
+  nextEntry: () => ({ text: "ഇനി അടുത്ത entry.", speech: "ഇനി അടുത്ത entry." }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames}-ന്റെ entry save ആയിരുന്നില്ല.`,
+    speech: `${customerNames}-ന്റെ entry save ആയിരുന്നില്ല.`,
+  }),
+
+  changeUnclear: () => ({ text: "എന്ത് മാറ്റണമെന്ന് മനസ്സിലായില്ല.", speech: "എന്ത് മാറ്റണമെന്ന് മനസ്സിലായില്ല." }),
+
+  askName: () => ({ text: "ആരുടെ പേരിൽ എഴുതണം?", speech: "ആരുടെ പേരിൽ എഴുതണം?" }),
+
+  askAmount: (customerName) => ({ text: `${customerName}, എത്ര രൂപ?`, speech: `${customerName}, എത്ര രൂപ?` }),
+
+  repaymentReadback: (p, needsReview) => {
+    const care = needsReview ? "ഒന്ന് ശ്രദ്ധിച്ച് കേൾക്കൂ. " : "";
+    if (p.changeRupees > 0) {
+      const paid = p.amountRupees + p.changeRupees;
+      return {
+        text: `${care}${p.customerName} ₹${r(paid)} തന്നു, പക്ഷേ കടം ₹${r(p.owedRupees)} മാത്രമായിരുന്നു. കണക്ക് തീരും, ₹${r(p.changeRupees)} തിരിച്ചു കൊടുക്കണം. save ചെയ്യട്ടെ?`,
+        speech: `${care}${p.customerName} ${r(paid)} രൂപ തന്നു, പക്ഷേ കടം ${r(p.owedRupees)} രൂപ മാത്രമായിരുന്നു. കണക്ക് തീരും, ${r(p.changeRupees)} രൂപ തിരിച്ചു കൊടുക്കണം. save ചെയ്യട്ടെ?`,
+      };
+    }
+    if (p.leftRupees === 0) {
+      return {
+        text: `${care}${p.customerName}-ൽ നിന്ന് മുഴുവൻ ₹${r(p.amountRupees)} കിട്ടി. കണക്ക് തീരും. save ചെയ്യട്ടെ?`,
+        speech: `${care}${p.customerName}-ൽ നിന്ന് മുഴുവൻ ${r(p.amountRupees)} രൂപ കിട്ടി. കണക്ക് തീരും. save ചെയ്യട്ടെ?`,
+      };
+    }
+    return {
+      text: `${care}${p.customerName}-ൽ നിന്ന് ₹${r(p.amountRupees)} കിട്ടി. ₹${r(p.owedRupees)} ബാക്കിയുണ്ടായിരുന്നു, ഇനി ₹${r(p.leftRupees)} ബാക്കി. save ചെയ്യട്ടെ?`,
+      speech: `${care}${p.customerName}-ൽ നിന്ന് ${r(p.amountRupees)} രൂപ കിട്ടി. ${r(p.owedRupees)} രൂപ ബാക്കിയുണ്ടായിരുന്നു, ഇനി ${r(p.leftRupees)} രൂപ ബാക്കി. save ചെയ്യട്ടെ?`,
+    };
+  },
+
+  repaymentCorrected: (p, needsReview) => {
+    const base = ml.repaymentReadback(p, needsReview);
+    return { text: `ശരിയാക്കി. ${base.text}`, speech: `ശരിയാക്കി. ${base.speech}` };
+  },
+
+  repaymentSaved: (customerName, leftRupees, changeRupees) => {
+    if (leftRupees > 0) {
+      return {
+        text: `save ആയി. ${customerName}-ന് ഇനി ₹${r(leftRupees)} ബാക്കി.`,
+        speech: `save ആയി. ${customerName}-ന് ഇനി ${r(leftRupees)} രൂപ ബാക്കി.`,
+      };
+    }
+    const back = changeRupees > 0;
+    return {
+      text: `save ആയി. ${customerName}-ന്റെ കണക്ക് തീർന്നു.${back ? ` ₹${r(changeRupees)} തിരിച്ചു കൊടുക്കാൻ മറക്കല്ലേ.` : ""}`,
+      speech: `save ആയി. ${customerName}-ന്റെ കണക്ക് തീർന്നു.${back ? ` ${r(changeRupees)} രൂപ തിരിച്ചു കൊടുക്കാൻ മറക്കല്ലേ.` : ""}`,
+    };
+  },
+
+  linkStillOut: (customerName) => ({
+    text: `${customerName}-നോട് ഇനി payment link-ൽ അടയ്ക്കേണ്ടെന്ന് പറയൂ.`,
+    speech: `${customerName}-നോട് ഇനി payment link-ൽ അടയ്ക്കേണ്ടെന്ന് പറയൂ.`,
+  }),
+
+  qrSameMoney: (customerName, amountRupees) => ({
+    text: `QR-ൽ ₹${r(amountRupees)} വന്നിട്ടുണ്ട്, ഇതുവരെ ഒരു കണക്കിലും ചേർത്തിട്ടില്ല. ഇത് ${customerName} തന്നതാണോ?`,
+    speech: `QR-ൽ ${r(amountRupees)} രൂപ വന്നിട്ടുണ്ട്, ഇതുവരെ ഒരു കണക്കിലും ചേർത്തിട്ടില്ല. ഇത് ${customerName} തന്നതാണോ?`,
+  }),
+
+  noSuchCustomer: (customerName) => ({
+    text: `${customerName}-ന്റെ പേരിൽ കണക്കില്ല.`,
+    speech: `${customerName}-ന്റെ പേരിൽ കണക്കില്ല.`,
+  }),
+
+  nothingOwed: (customerName) => ({
+    text: `${customerName}-ന് ബാക്കിയൊന്നുമില്ല.`,
+    speech: `${customerName}-ന് ബാക്കിയൊന്നുമില്ല.`,
+  }),
+
+  customerOwes: (customerName, pendingRupees) => ({
+    text: `${customerName}-ന് ₹${r(pendingRupees)} ബാക്കിയുണ്ട്.`,
+    speech: `${customerName}-ന് ${r(pendingRupees)} രൂപ ബാക്കിയുണ്ട്.`,
+  }),
+
+  shopOwed: (pendingRupees, customers) => {
+    const where = customers === 1 ? "ഒരു കണക്കിൽ" : `${customers} കണക്കുകളിലായി`;
+    return {
+      text: `ആകെ ₹${r(pendingRupees)} ബാക്കി, ${where}.`,
+      speech: `ആകെ ${r(pendingRupees)} രൂപ ബാക്കി, ${where}.`,
+    };
+  },
+
+  nobodyOwes: () => ({ text: "ഇപ്പോൾ ആർക്കും ബാക്കിയില്ല.", speech: "ഇപ്പോൾ ആർക്കും ബാക്കിയില്ല." }),
 };

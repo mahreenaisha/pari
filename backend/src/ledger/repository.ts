@@ -1,7 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 import { AppError, notFound } from "../helpers/errors.js";
 import type { Actor, Customer, DB, EntryStatus, LedgerEntry, Payment, PaymentLink } from "../db/types.js";
-import { isCloseName, normalizeName } from "./names.js";
+import { customerKey, matchName, normalizeName, type NameMatch } from "./names.js";
 import { assertTransition } from "./state.js";
 
 export type Db = Kysely<DB>;
@@ -61,34 +62,83 @@ export async function getCustomer(db: Db, merchantId: string, id: string): Promi
   return customer;
 }
 
+const FIT: Record<NameMatch, number> = { exact: 0, fuzzy: 1, maybe: 2 };
+
+/** Customers the spoken name could mean, best fit first, so "Gupta didi" finds Gupta didi before Gupta ji. */
+export async function matchCustomers(
+  db: Db,
+  merchantId: string,
+  spokenName: string,
+): Promise<Array<{ customer: Customer; match: NameMatch }>> {
+  if (!normalizeName(spokenName)) throw new AppError(422, "INVALID_CUSTOMER_NAME", "Customer name is empty");
+  const all = await listCustomers(db, merchantId);
+  return all
+    .flatMap((customer) => {
+      const match = matchName(spokenName, customer.name);
+      return match ? [{ customer, match }] : [];
+    })
+    .sort((a, b) => FIT[a.match] - FIT[b.match]);
+}
+
+export async function createCustomer(db: Db, merchantId: string, spokenName: string): Promise<Customer> {
+  const key = customerKey(spokenName);
+  if (!key) throw new AppError(422, "INVALID_CUSTOMER_NAME", "Customer name is empty");
+  const created = await db
+    .insertInto("customers")
+    .values({ merchant_id: merchantId, name: spokenName.trim(), name_normalized: key, phone: null })
+    .onConflict((oc) => oc.columns(["merchant_id", "name_normalized"]).doNothing())
+    .returningAll()
+    .executeTakeFirst();
+  if (created) return created;
+  return db
+    .selectFrom("customers")
+    .selectAll()
+    .where("merchant_id", "=", merchantId)
+    .where("name_normalized", "=", key)
+    .executeTakeFirstOrThrow();
+}
+
+/** For callers that can't ask the merchant, a "maybe" counts as the same customer. */
 export async function findOrCreateCustomer(
   db: Db,
   merchantId: string,
   spokenName: string,
-): Promise<{ customer: Customer; match: "exact" | "fuzzy" | "new" }> {
-  const normalized = normalizeName(spokenName);
-  if (!normalized) throw new AppError(422, "INVALID_CUSTOMER_NAME", "Customer name is empty");
+): Promise<{ customer: Customer; match: NameMatch | "new" }> {
+  const [best] = await matchCustomers(db, merchantId, spokenName);
+  if (best) return best;
+  return { customer: await createCustomer(db, merchantId, spokenName), match: "new" };
+}
 
-  const all = await listCustomers(db, merchantId);
-  const exact = all.find((c) => c.name_normalized === normalized);
-  if (exact) return { customer: exact, match: "exact" };
-  const fuzzy = all.find((c) => isCloseName(c.name_normalized, normalized));
-  if (fuzzy) return { customer: fuzzy, match: "fuzzy" };
+/**
+ * The customer names the model is told about, most recently active first. A name whose only entries were
+ * never saved, like a misheard one the merchant said no to, is left out.
+ */
+export async function knownCustomerNames(db: Db, merchantId: string, limit: number): Promise<string[]> {
+  const { rows } = await sql<{ name: string }>`
+    select c.name from customers c
+    left join ledger_entries e on e.customer_id = c.id and e.status in ('OPEN', 'CLOSED')
+    where c.merchant_id = ${merchantId}
+    group by c.id
+    having count(e.id) > 0 or not exists (select 1 from ledger_entries x where x.customer_id = c.id)
+    order by max(e.created_at) desc nulls last, c.created_at desc
+    limit ${limit}`.execute(db);
+  return rows.map((r) => r.name);
+}
 
-  const created = await db
-    .insertInto("customers")
-    .values({ merchant_id: merchantId, name: spokenName.trim(), name_normalized: normalized, phone: null })
-    .onConflict((oc) => oc.columns(["merchant_id", "name_normalized"]).doNothing())
-    .returningAll()
-    .executeTakeFirst();
-  if (created) return { customer: created, match: "new" };
-  const raced = await db
-    .selectFrom("customers")
-    .selectAll()
-    .where("merchant_id", "=", merchantId)
-    .where("name_normalized", "=", normalized)
-    .executeTakeFirstOrThrow();
-  return { customer: raced, match: "exact" };
+/** Moves customers saved before honorifics told "Gupta ji" from "Gupta didi" onto customerKey. */
+export async function rekeyCustomers(db: Db): Promise<void> {
+  const all = await db.selectFrom("customers").select(["id", "merchant_id", "name", "name_normalized"]).execute();
+  for (const c of all) {
+    const key = customerKey(c.name);
+    if (key === c.name_normalized) continue;
+    const taken = await db
+      .selectFrom("customers")
+      .select("id")
+      .where("merchant_id", "=", c.merchant_id)
+      .where("name_normalized", "=", key)
+      .executeTakeFirst();
+    if (!taken) await db.updateTable("customers").set({ name_normalized: key }).where("id", "=", c.id).execute();
+  }
 }
 
 export async function setCustomerPhone(db: Db, merchantId: string, customerId: string, phone: string): Promise<Customer> {
@@ -113,6 +163,21 @@ export async function customerBalancePaise(db: Db, merchantId: string, customerI
     .where("status", "=", "OPEN")
     .executeTakeFirstOrThrow();
   return Number(row.pending);
+}
+
+/** What the whole shop is owed, and by how many customers. */
+export async function shopBalance(db: Db, merchantId: string): Promise<{ pendingPaise: number; customers: number }> {
+  const row = await db
+    .selectFrom("ledger_entries")
+    .select([
+      sql<number>`coalesce(sum(pending_paise), 0)::int`.as("pending"),
+      sql<number>`count(distinct customer_id)::int`.as("customers"),
+    ])
+    .where("merchant_id", "=", merchantId)
+    .where("status", "=", "OPEN")
+    .where("pending_paise", ">", 0)
+    .executeTakeFirstOrThrow();
+  return { pendingPaise: Number(row.pending), customers: Number(row.customers) };
 }
 
 // ------------------------------------------------------------------ entries
@@ -356,4 +421,86 @@ export async function applyPayment(
     payload: { ...payload, appliedPaise, excessPaise },
   });
   return { appliedPaise, excessPaise, closed: to === "CLOSED", pendingPaise };
+}
+
+export interface CashSettlement {
+  /** The entries the money went to, oldest first, as they are now. */
+  entries: EntryWithCustomer[];
+  /** How much of the cash went in: all of it, or what was owed. */
+  appliedPaise: number;
+  /** What the customer still owes. */
+  balancePaise: number;
+  /** Payment links that were still waiting on an entry this paid off. */
+  expiredLinks: number;
+}
+
+/**
+ * Cash a customer paid back, against their open entries oldest first. Each entry it reaches gets its own
+ * payment row, and a link still waiting on an entry it pays off is expired, so it isn't counted twice.
+ * Anything beyond what they owe is not recorded.
+ */
+export async function settleCash(
+  db: Db,
+  merchantId: string,
+  customerId: string,
+  amountPaise: number,
+  transcript: string | null,
+): Promise<CashSettlement> {
+  const reached: string[] = [];
+  let appliedPaise = 0;
+  let expiredLinks = 0;
+  await inTx(db, async (trx) => {
+    const open = await trx
+      .selectFrom("ledger_entries")
+      .select(["id", "pending_paise"])
+      .where("merchant_id", "=", merchantId)
+      .where("customer_id", "=", customerId)
+      .where("status", "=", "OPEN")
+      .orderBy("created_at", "asc")
+      .orderBy("id", "asc")
+      .forUpdate()
+      .execute();
+    let left = amountPaise;
+    for (const entry of open) {
+      if (left <= 0) break;
+      const part = Math.min(left, entry.pending_paise);
+      if (part <= 0) continue;
+      const payment = await trx
+        .insertInto("payments")
+        .values({
+          merchant_id: merchantId,
+          source: "CASH",
+          txn_id: `cash:${randomUUID()}`,
+          order_id: null,
+          amount_paise: part,
+          payer_name: null,
+          entry_id: entry.id,
+          match_status: "MATCHED",
+          resolved_at: new Date(),
+        })
+        .returning(["id", "txn_id"])
+        .executeTakeFirstOrThrow();
+      const applied = await applyPayment(trx, merchantId, entry.id, part, "merchant", {
+        paymentId: payment.id,
+        txnId: payment.txn_id,
+        source: "CASH",
+        transcript,
+      });
+      if (applied.closed) {
+        const expired = await trx
+          .updateTable("payment_links")
+          .set({ status: "EXPIRED" })
+          .where("entry_id", "=", entry.id)
+          .where("status", "=", "ACTIVE")
+          .returning("id")
+          .execute();
+        expiredLinks += expired.length;
+      }
+      reached.push(entry.id);
+      left -= part;
+    }
+    appliedPaise = amountPaise - left;
+  });
+  const entries = await Promise.all(reached.map((id) => getEntry(db, merchantId, id)));
+  return { entries, appliedPaise, balancePaise: await customerBalancePaise(db, merchantId, customerId), expiredLinks };
 }

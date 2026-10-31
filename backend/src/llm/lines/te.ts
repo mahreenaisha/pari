@@ -136,4 +136,104 @@ export const te: LineBook = {
     text: "మొత్తం సరిగ్గా వినిపించలేదు. ఇంకోసారి చెప్పండి.",
     speech: "మొత్తం సరిగ్గా వినిపించలేదు. ఇంకోసారి చెప్పండి.",
   }),
+
+  newCustomer: () => ({ text: "కొత్త ఖాతా.", speech: "కొత్త ఖాతా." }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName}, ${knownName} ఇద్దరూ ఒకరేనా?`,
+    speech: `${spokenName}, ${knownName} ఇద్దరూ ఒకరేనా?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName} entry తర్వాత. ముందు ఇది:`,
+    speech: `${nextCustomerName} entry తర్వాత. ముందు ఇది:`,
+  }),
+
+  nextEntry: () => ({ text: "ఇప్పుడు తర్వాతి entry.", speech: "ఇప్పుడు తర్వాతి entry." }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames} entry save కాలేదు.`,
+    speech: `${customerNames} entry save కాలేదు.`,
+  }),
+
+  changeUnclear: () => ({ text: "ఏం మార్చాలో అర్థం కాలేదు.", speech: "ఏం మార్చాలో అర్థం కాలేదు." }),
+
+  askName: () => ({ text: "ఎవరి పేరు మీద రాయాలి?", speech: "ఎవరి పేరు మీద రాయాలి?" }),
+
+  askAmount: (customerName) => ({ text: `${customerName}, ఎన్ని రూపాయలు?`, speech: `${customerName}, ఎన్ని రూపాయలు?` }),
+
+  repaymentReadback: (p, needsReview) => {
+    const care = needsReview ? "ఒకసారి జాగ్రత్తగా వినండి. " : "";
+    if (p.changeRupees > 0) {
+      const paid = p.amountRupees + p.changeRupees;
+      return {
+        text: `${care}${p.customerName} ₹${r(paid)} ఇచ్చారు, కానీ బాకీ ₹${r(p.owedRupees)} మాత్రమే. ఖాతా పూర్తవుతుంది, ₹${r(p.changeRupees)} తిరిగి ఇవ్వాలి. save చేయనా?`,
+        speech: `${care}${p.customerName} ${r(paid)} రూపాయలు ఇచ్చారు, కానీ బాకీ ${r(p.owedRupees)} రూపాయలు మాత్రమే. ఖాతా పూర్తవుతుంది, ${r(p.changeRupees)} రూపాయలు తిరిగి ఇవ్వాలి. save చేయనా?`,
+      };
+    }
+    if (p.leftRupees === 0) {
+      return {
+        text: `${care}${p.customerName} నుంచి పూర్తిగా ₹${r(p.amountRupees)} వచ్చాయి. ఖాతా పూర్తవుతుంది. save చేయనా?`,
+        speech: `${care}${p.customerName} నుంచి పూర్తిగా ${r(p.amountRupees)} రూపాయలు వచ్చాయి. ఖాతా పూర్తవుతుంది. save చేయనా?`,
+      };
+    }
+    return {
+      text: `${care}${p.customerName} నుంచి ₹${r(p.amountRupees)} వచ్చాయి. ₹${r(p.owedRupees)} బాకీ ఉండేది, ఇక ₹${r(p.leftRupees)} బాకీ ఉంటుంది. save చేయనా?`,
+      speech: `${care}${p.customerName} నుంచి ${r(p.amountRupees)} రూపాయలు వచ్చాయి. ${r(p.owedRupees)} రూపాయలు బాకీ ఉండేది, ఇక ${r(p.leftRupees)} రూపాయలు బాకీ ఉంటుంది. save చేయనా?`,
+    };
+  },
+
+  repaymentCorrected: (p, needsReview) => {
+    const base = te.repaymentReadback(p, needsReview);
+    return { text: `సరిచేశాను. ${base.text}`, speech: `సరిచేశాను. ${base.speech}` };
+  },
+
+  repaymentSaved: (customerName, leftRupees, changeRupees) => {
+    if (leftRupees > 0) {
+      return {
+        text: `save అయింది. ${customerName} కి ఇంకా ₹${r(leftRupees)} బాకీ.`,
+        speech: `save అయింది. ${customerName} కి ఇంకా ${r(leftRupees)} రూపాయలు బాకీ.`,
+      };
+    }
+    const back = changeRupees > 0;
+    return {
+      text: `save అయింది. ${customerName} ఖాతా పూర్తయింది.${back ? ` ₹${r(changeRupees)} తిరిగి ఇవ్వడం మర్చిపోకండి.` : ""}`,
+      speech: `save అయింది. ${customerName} ఖాతా పూర్తయింది.${back ? ` ${r(changeRupees)} రూపాయలు తిరిగి ఇవ్వడం మర్చిపోకండి.` : ""}`,
+    };
+  },
+
+  linkStillOut: (customerName) => ({
+    text: `${customerName} కి ఇక payment link లో కట్టొద్దని చెప్పండి.`,
+    speech: `${customerName} కి ఇక payment link లో కట్టొద్దని చెప్పండి.`,
+  }),
+
+  qrSameMoney: (customerName, amountRupees) => ({
+    text: `QR లో ₹${r(amountRupees)} వచ్చాయి, ఇంకా ఏ ఖాతాలోనూ కలపలేదు. ఇవి ${customerName} ఇచ్చినవేనా?`,
+    speech: `QR లో ${r(amountRupees)} రూపాయలు వచ్చాయి, ఇంకా ఏ ఖాతాలోనూ కలపలేదు. ఇవి ${customerName} ఇచ్చినవేనా?`,
+  }),
+
+  noSuchCustomer: (customerName) => ({
+    text: `${customerName} పేరుతో ఖాతా లేదు.`,
+    speech: `${customerName} పేరుతో ఖాతా లేదు.`,
+  }),
+
+  nothingOwed: (customerName) => ({
+    text: `${customerName} కి బాకీ ఏమీ లేదు.`,
+    speech: `${customerName} కి బాకీ ఏమీ లేదు.`,
+  }),
+
+  customerOwes: (customerName, pendingRupees) => ({
+    text: `${customerName} కి ₹${r(pendingRupees)} బాకీ ఉంది.`,
+    speech: `${customerName} కి ${r(pendingRupees)} రూపాయలు బాకీ ఉంది.`,
+  }),
+
+  shopOwed: (pendingRupees, customers) => {
+    const where = customers === 1 ? "ఒకే ఖాతాలో" : `${customers} ఖాతాల్లో`;
+    return {
+      text: `మొత్తం ₹${r(pendingRupees)} బాకీ, ${where}.`,
+      speech: `మొత్తం ${r(pendingRupees)} రూపాయలు బాకీ, ${where}.`,
+    };
+  },
+
+  nobodyOwes: () => ({ text: "ఇప్పుడు ఎవరికీ బాకీ లేదు.", speech: "ఇప్పుడు ఎవరికీ బాకీ లేదు." }),
 };

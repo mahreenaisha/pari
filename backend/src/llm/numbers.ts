@@ -15,9 +15,30 @@ export function toAsciiDigits(text: string): string {
   });
 }
 
+/** Languages whose spoken amounts extractNumbers can read. In the others Saaras writes amounts as words it can't. */
+export const READS_NUMBER_WORDS: ReadonlySet<Language> = new Set(["hi-IN", "en-IN"]);
+
+// Hindi has its own word for every number below 100, and Saaras often writes amounts that way ("तीन सौ पैंतीस").
+const HINDI_21_TO_99 = (
+  "इक्कीस बाईस तेईस चौबीस पच्चीस छब्बीस सत्ताईस अट्ठाईस उनतीस तीस " +
+  "इकतीस बत्तीस तैंतीस चौंतीस पैंतीस छत्तीस सैंतीस अड़तीस उनतालीस चालीस " +
+  "इकतालीस बयालीस तैंतालीस चवालीस पैंतालीस छियालीस सैंतालीस अड़तालीस उनचास पचास " +
+  "इक्यावन बावन तिरपन चौवन पचपन छप्पन सत्तावन अट्ठावन उनसठ साठ " +
+  "इकसठ बासठ तिरसठ चौंसठ पैंसठ छियासठ सड़सठ अड़सठ उनहत्तर सत्तर " +
+  "इकहत्तर बहत्तर तिहत्तर चौहत्तर पचहत्तर छिहत्तर सतहत्तर अठहत्तर उन्यासी अस्सी " +
+  "इक्यासी बयासी तिरासी चौरासी पचासी छियासी सत्तासी अट्ठासी नवासी नब्बे " +
+  "इक्यानवे बानवे तिरानवे चौरानवे पंचानवे छियानवे सत्तानवे अट्ठानवे निन्यानवे"
+).normalize("NFKC").split(" ");
+const HINDI_SPELLINGS: Record<string, number> = {
+  "चौवालीस": 44, "सरसठ": 67, "उनासी": 79, "इक्यानबे": 91, "बानबे": 92, "तिरानबे": 93,
+  "चौरानबे": 94, "पंचानबे": 95, "छियानबे": 96, "सत्तानबे": 97, "अट्ठानबे": 98, "निन्यानबे": 99,
+};
+
 // Word -> value. Romanized Hindi, Devanagari Hindi and English. Words that double as
 // common Hindi verbs or English words ("do" = give, "no", "so") are left out on purpose.
 const UNITS: Record<string, number> = {
+  ...Object.fromEntries(HINDI_21_TO_99.map((word, i) => [word, 21 + i])),
+  ...HINDI_SPELLINGS,
   zero: 0, shunya: 0, sifar: 0, "शून्य": 0,
   one: 1, ek: 1, "एक": 1,
   two: 2, "दो": 2,
@@ -95,7 +116,8 @@ export function extractNumbers(text: string): number[] {
       prefix = FRACTION_PREFIX[tokens[j]!]!;
       j++;
     }
-    let value: number | null = null;
+    // A bare "sau" or "hazaar" is one of them, except after digits ("3 sau" is read as written).
+    let value: number | null = MULTIPLIERS[tokens[j] ?? ""] !== undefined && !/^\d/.test(tokens[i - 1] ?? "") ? 1 : null;
     let total = 0;
     while (j < tokens.length) {
       const w = tokens[j]!;

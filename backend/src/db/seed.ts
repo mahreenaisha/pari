@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { sql, type Kysely } from "kysely";
-import { normalizeName } from "../ledger/names.js";
+import { customerKey } from "../ledger/names.js";
 import type { DB, Merchant, PaymentSource } from "./types.js";
 
 export const hashApiKey = (key: string) => createHash("sha256").update(key).digest("hex");
@@ -21,7 +21,7 @@ export async function seedDemo(db: Kysely<DB>, apiKey: string): Promise<Merchant
   for (const name of DEMO_CUSTOMERS) {
     await db
       .insertInto("customers")
-      .values({ merchant_id: merchant.id, name, name_normalized: normalizeName(name), phone: null })
+      .values({ merchant_id: merchant.id, name, name_normalized: customerKey(name), phone: null })
       .onConflict((oc) => oc.columns(["merchant_id", "name_normalized"]).doNothing())
       .execute();
   }
@@ -56,7 +56,7 @@ export async function seedDemoHistory(db: Kysely<DB>, merchantId: string): Promi
     for (const past of PAST_ENTRIES) {
       const customer = await trx
         .insertInto("customers")
-        .values({ merchant_id: merchantId, name: past.customer, name_normalized: normalizeName(past.customer), phone: past.phone ?? null })
+        .values({ merchant_id: merchantId, name: past.customer, name_normalized: customerKey(past.customer), phone: past.phone ?? null })
         .onConflict((oc) => oc.columns(["merchant_id", "name_normalized"]).doUpdateSet({ phone: past.phone ?? null }))
         .returning("id")
         .executeTakeFirstOrThrow();

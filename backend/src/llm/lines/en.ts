@@ -136,4 +136,104 @@ export const en: LineBook = {
     text: "I couldn't hear the amounts clearly. Please say it once more.",
     speech: "I couldn't hear the amounts clearly. Please say it once more.",
   }),
+
+  newCustomer: () => ({ text: "New customer.", speech: "New customer." }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `Are ${spokenName} and ${knownName} the same person?`,
+    speech: `Are ${spokenName} and ${knownName} the same person?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName}'s entry comes next. First this one:`,
+    speech: `${nextCustomerName}'s entry comes next. First this one:`,
+  }),
+
+  nextEntry: () => ({ text: "Next entry.", speech: "Next entry." }),
+
+  unsaved: (customerNames) => ({
+    text: `The entry for ${customerNames} was not saved.`,
+    speech: `The entry for ${customerNames} was not saved.`,
+  }),
+
+  changeUnclear: () => ({ text: "I didn't get what to change.", speech: "I didn't get what to change." }),
+
+  askName: () => ({ text: "Whose is it?", speech: "Whose is it?" }),
+
+  askAmount: (customerName) => ({ text: `How much, for ${customerName}?`, speech: `How much, for ${customerName}?` }),
+
+  repaymentReadback: (p, needsReview) => {
+    const care = needsReview ? "Please listen carefully. " : "";
+    if (p.changeRupees > 0) {
+      const paid = p.amountRupees + p.changeRupees;
+      return {
+        text: `${care}${p.customerName} paid ₹${r(paid)}, but only owed ₹${r(p.owedRupees)}. That closes the account, with ₹${r(p.changeRupees)} to give back. Shall I save it?`,
+        speech: `${care}${p.customerName} paid ${r(paid)} rupees, but only owed ${r(p.owedRupees)}. That closes the account, with ${r(p.changeRupees)} rupees to give back. Shall I save it?`,
+      };
+    }
+    if (p.leftRupees === 0) {
+      return {
+        text: `${care}₹${r(p.amountRupees)} from ${p.customerName}, all they owed. That closes the account. Shall I save it?`,
+        speech: `${care}${r(p.amountRupees)} rupees from ${p.customerName}, all they owed. That closes the account. Shall I save it?`,
+      };
+    }
+    return {
+      text: `${care}₹${r(p.amountRupees)} from ${p.customerName}. ₹${r(p.owedRupees)} was pending, ₹${r(p.leftRupees)} will be left. Shall I save it?`,
+      speech: `${care}${r(p.amountRupees)} rupees from ${p.customerName}. ${r(p.owedRupees)} was pending, ${r(p.leftRupees)} will be left. Shall I save it?`,
+    };
+  },
+
+  repaymentCorrected: (p, needsReview) => {
+    const base = en.repaymentReadback(p, needsReview);
+    return { text: `Corrected. ${base.text}`, speech: `Corrected. ${base.speech}` };
+  },
+
+  repaymentSaved: (customerName, leftRupees, changeRupees) => {
+    if (leftRupees > 0) {
+      return {
+        text: `Saved. ${customerName} now owes ₹${r(leftRupees)}.`,
+        speech: `Saved. ${customerName} now owes ${r(leftRupees)} rupees.`,
+      };
+    }
+    const back = changeRupees > 0;
+    return {
+      text: `Saved. ${customerName}'s account is closed.${back ? ` Remember to give back ₹${r(changeRupees)}.` : ""}`,
+      speech: `Saved. ${customerName}'s account is closed.${back ? ` Remember to give back ${r(changeRupees)} rupees.` : ""}`,
+    };
+  },
+
+  linkStillOut: (customerName) => ({
+    text: `Tell ${customerName} not to pay the payment link now.`,
+    speech: `Tell ${customerName} not to pay the payment link now.`,
+  }),
+
+  qrSameMoney: (customerName, amountRupees) => ({
+    text: `₹${r(amountRupees)} came in on the QR and isn't in any account yet. Is that this money from ${customerName}?`,
+    speech: `${r(amountRupees)} rupees came in on the QR and isn't in any account yet. Is that this money from ${customerName}?`,
+  }),
+
+  noSuchCustomer: (customerName) => ({
+    text: `I couldn't find an account for ${customerName}.`,
+    speech: `I couldn't find an account for ${customerName}.`,
+  }),
+
+  nothingOwed: (customerName) => ({
+    text: `${customerName} doesn't owe anything.`,
+    speech: `${customerName} doesn't owe anything.`,
+  }),
+
+  customerOwes: (customerName, pendingRupees) => ({
+    text: `${customerName} owes ₹${r(pendingRupees)}.`,
+    speech: `${customerName} owes ${r(pendingRupees)} rupees.`,
+  }),
+
+  shopOwed: (pendingRupees, customers) => {
+    const across = customers === 1 ? "in one account" : `across ${customers} accounts`;
+    return {
+      text: `₹${r(pendingRupees)} is pending in all, ${across}.`,
+      speech: `${r(pendingRupees)} rupees is pending in all, ${across}.`,
+    };
+  },
+
+  nobodyOwes: () => ({ text: "Nobody owes anything right now.", speech: "Nobody owes anything right now." }),
 };

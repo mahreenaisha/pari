@@ -1,9 +1,13 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { rekeyCustomers } from "../ledger/repository.js";
 import type { Database } from "./client.js";
 
 const MIGRATIONS_DIR = path.resolve(import.meta.dirname, "../../src/db/migrations");
+
+/** Steps that need app code, each applied once after the SQL files. */
+const CODE_MIGRATIONS: Array<[name: string, run: typeof rekeyCustomers]> = [["003_customer_keys", rekeyCustomers]];
 
 export async function migrate(database: Database): Promise<string[]> {
   await database.exec(
@@ -19,6 +23,14 @@ export async function migrate(database: Database): Promise<string[]> {
     const script = readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
     await database.exec(`begin;\n${script}\ninsert into _migrations (name) values ('${file}');\ncommit;`);
     ran.push(file);
+  }
+  for (const [name, run] of CODE_MIGRATIONS) {
+    if (applied.has(name)) continue;
+    await database.db.transaction().execute(async (trx) => {
+      await run(trx);
+      await trx.insertInto("_migrations").values({ name }).execute();
+    });
+    ran.push(name);
   }
   return ran;
 }

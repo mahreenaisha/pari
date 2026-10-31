@@ -19,7 +19,11 @@ export const kn: Strings = {
   listen: {
     hints: {
       IDLE: 'ಯಾರು ಏನು ತಗೊಂಡರು, ಎಷ್ಟು ಕೊಟ್ಟರು.',
+      AWAITING_NAME: 'ಯಾರದು ಅಂತ ಹೇಳಿ.',
+      AWAITING_AMOUNT: 'ಎಷ್ಟು ಅಂತ ಹೇಳಿ.',
+      AWAITING_CUSTOMER_CHOICE: 'ಹೌದಾ ಇಲ್ಲವಾ?',
       AWAITING_ENTRY_CONFIRM: 'ಹೌದು, ಇಲ್ಲ, ಅಥವಾ ಏನು ಬದಲಾಯಿಸಬೇಕು.',
+      AWAITING_PAYMENT_CONFIRM: 'ಹೌದು, ಇಲ್ಲ, ಅಥವಾ ಏನು ಬದಲಾಯಿಸಬೇಕು.',
       AWAITING_COLLECT_CHOICE: 'ಹೌದಾ ಇಲ್ಲವಾ?',
       AWAITING_PHONE: 'ಹತ್ತೂ ಅಂಕಿಗಳನ್ನು ಹೇಳಿ.',
       AWAITING_PHONE_CONFIRM: 'ಹೌದಾ ಇಲ್ಲವಾ?',
@@ -31,6 +35,7 @@ export const kn: Strings = {
     example: '“ಮಂಜುನಾಥ್ ಅವರು 350 ರೂಪಾಯಿ ಸಾಮಾನು ತಗೊಂಡರು, 200 UPI ನಲ್ಲಿ ಕೊಟ್ಟರು, 150 ಬಾಕಿ”',
     sayYes: 'ಅಥವಾ ಆಕಾಶ ಮುಟ್ಟಿ “ಹೌದು” ಅನ್ನಿ',
     sayNumber: 'ಆಕಾಶ ಮುಟ್ಟಿ number ಹೇಳಿ.',
+    sayAnswer: 'ಆಕಾಶ ಮುಟ್ಟಿ ಉತ್ತರ ಹೇಳಿ.',
     breakdown: (total, paid, pending) => `ಒಟ್ಟು ${total} · ಕೊಟ್ಟಿದ್ದು ${paid} · ಬಾಕಿ ${pending}`,
     linkOffer: 'SMS ಮೂಲಕ Paytm payment link',
     linkOfferTo: (phone) => `${phone} ಗೆ SMS ಮೂಲಕ Paytm payment link`,
@@ -93,6 +98,7 @@ export const kn: Strings = {
     loadFailed: 'ಖಾತೆ load ಆಗಲಿಲ್ಲ.',
     closedByLink: 'link ಮೂಲಕ ಮುಗಿಯಿತು',
     closedByQr: 'QR ಮೂಲಕ ಮುಗಿಯಿತು',
+    closedByCash: 'ನಗದು ಮೂಲಕ ಮುಗಿಯಿತು',
     paidInFull: 'ಪೂರ್ತಿ ಕೊಟ್ಟಿದ್ದಾರೆ',
     linkSent: 'link ಹೋಗಿದೆ',
     paid: (amount) => `${amount} ಕೊಟ್ಟಿದ್ದಾರೆ`,

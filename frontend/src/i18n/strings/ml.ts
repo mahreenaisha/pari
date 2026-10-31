@@ -19,7 +19,11 @@ export const ml: Strings = {
   listen: {
     hints: {
       IDLE: 'ആര് എന്ത് വാങ്ങി, എത്ര തന്നു.',
+      AWAITING_NAME: 'ആരുടേതാണെന്ന് പറയൂ.',
+      AWAITING_AMOUNT: 'എത്രയെന്ന് പറയൂ.',
+      AWAITING_CUSTOMER_CHOICE: 'അതെയോ ഇല്ലയോ?',
       AWAITING_ENTRY_CONFIRM: 'അതെ, ഇല്ല, അല്ലെങ്കിൽ എന്ത് മാറ്റണം.',
+      AWAITING_PAYMENT_CONFIRM: 'അതെ, ഇല്ല, അല്ലെങ്കിൽ എന്ത് മാറ്റണം.',
       AWAITING_COLLECT_CHOICE: 'അതെയോ ഇല്ലയോ?',
       AWAITING_PHONE: 'പത്ത് അക്കവും പറയൂ.',
       AWAITING_PHONE_CONFIRM: 'അതെയോ ഇല്ലയോ?',
@@ -31,6 +35,7 @@ export const ml: Strings = {
     example: '“രാജൻ ചേട്ടൻ 350 രൂപയുടെ സാധനം വാങ്ങി, 200 UPI-യിൽ തന്നു, 150 ബാക്കി”',
     sayYes: 'അല്ലെങ്കിൽ ആകാശം തൊട്ട് “അതെ” എന്ന് പറയൂ',
     sayNumber: 'ആകാശം തൊട്ട് number പറയൂ.',
+    sayAnswer: 'ആകാശം തൊട്ട് മറുപടി പറയൂ.',
     breakdown: (total, paid, pending) => `ആകെ ${total} · തന്നത് ${paid} · ബാക്കി ${pending}`,
     linkOffer: 'SMS വഴി Paytm payment link',
     linkOfferTo: (phone) => `${phone}-ലേക്ക് SMS വഴി Paytm payment link`,
@@ -96,6 +101,7 @@ export const ml: Strings = {
     loadFailed: 'കണക്ക് load ആയില്ല.',
     closedByLink: 'link വഴി തീർന്നു',
     closedByQr: 'QR വഴി തീർന്നു',
+    closedByCash: 'പണമായി തീർന്നു',
     paidInFull: 'മുഴുവൻ തന്നു',
     linkSent: 'link അയച്ചു',
     paid: (amount) => `${amount} തന്നു`,

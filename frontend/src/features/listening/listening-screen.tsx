@@ -92,6 +92,11 @@ function turnScene(turn: Turn, answer: (text: 'haan' | 'nahi') => void, strings:
   };
 
   switch (turn.state) {
+    case 'AWAITING_NAME':
+    case 'AWAITING_AMOUNT':
+      return { ...said, actions: [no(listen.skip)], footnote: listen.sayAnswer };
+    case 'AWAITING_CUSTOMER_CHOICE':
+      return { ...said, actions: [yes(common.yes), no(common.no)], footnote: listen.sayYes };
     case 'AWAITING_ENTRY_CONFIRM':
       return {
         ...said,
@@ -100,6 +105,12 @@ function turnScene(turn: Turn, answer: (text: 'haan' | 'nahi') => void, strings:
         actions: [yes(listen.save), no(common.no)],
         footnote: listen.sayYes,
       };
+    case 'AWAITING_PAYMENT_CONFIRM':
+      // Pari first asks whether QR money of the same amount is this cash.
+      if (turn.reply.key === 'qrSameMoney') {
+        return { ...said, note: listen.paidToQr, actions: [yes(common.yes), no(common.no)], footnote: listen.sayYes };
+      }
+      return { ...said, actions: [yes(listen.save), no(common.no)], footnote: listen.sayYes };
     case 'AWAITING_COLLECT_CHOICE':
       return {
         ...said,

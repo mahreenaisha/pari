@@ -12,23 +12,24 @@ import { announce, showTurn } from './conversation-store';
 export function usePariEvents() {
   const queryClient = useQueryClient();
 
-  useEffect(
-    () =>
-      subscribeToPariEvents((event) => {
-        void queryClient.invalidateQueries({ queryKey: ledgerKeys.all });
-        void queryClient.invalidateQueries({ queryKey: qrPaymentKeys.all });
-        switch (event.type) {
-          case 'pari.prompt':
-            showTurn({ state: event.state, reply: event.line });
-            break;
-          case 'payment.received':
-            announce(event.line, event.entry && toLedgerEntry(event.entry));
-            break;
-          case 'pari.announce':
-            announce(event.line);
-            break;
-        }
-      }),
-    [queryClient],
-  );
+  useEffect(() => {
+    const refresh = () => {
+      void queryClient.invalidateQueries({ queryKey: ledgerKeys.all });
+      void queryClient.invalidateQueries({ queryKey: qrPaymentKeys.all });
+    };
+    return subscribeToPariEvents((event) => {
+      refresh();
+      switch (event.type) {
+        case 'pari.prompt':
+          showTurn({ state: event.state, reply: event.line });
+          break;
+        case 'payment.received':
+          void announce(event.line, event.entry && toLedgerEntry(event.entry));
+          break;
+        case 'pari.announce':
+          void announce(event.line);
+          break;
+      }
+    }, refresh);
+  }, [queryClient]);
 }

@@ -106,6 +106,17 @@ export const gu: Strings = {
     linkSent: 'link મોકલી',
     paid: (amount) => `${amount} આપ્યા`,
     nothingPaid: 'હજી કંઈ નથી આપ્યું',
+    paidBy: {
+      qr: (amount) => `QR થી ${amount} આપ્યા`,
+      cash: (amount) => `રોકડથી ${amount} આપ્યા`,
+      link: (amount) => `link થી ${amount} આપ્યા`,
+    },
+    history: {
+      bought: (total) => `${total} નો સામાન લીધો`,
+      atCounter: (amount) => `ત્યારે જ ${amount} આપ્યા`,
+      extra: (amount) => `${amount} વધારે`,
+      linkSent: (amount) => `${amount} ની link મોકલી`,
+    },
     pending: 'બાકી',
     settled: 'ચૂકવ્યા',
     today: 'આજે',

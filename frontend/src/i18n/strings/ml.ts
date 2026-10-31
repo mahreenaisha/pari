@@ -106,6 +106,17 @@ export const ml: Strings = {
     linkSent: 'link അയച്ചു',
     paid: (amount) => `${amount} തന്നു`,
     nothingPaid: 'ഇതുവരെ ഒന്നും തന്നില്ല',
+    paidBy: {
+      qr: (amount) => `QR വഴി ${amount} തന്നു`,
+      cash: (amount) => `പണമായി ${amount} തന്നു`,
+      link: (amount) => `link വഴി ${amount} തന്നു`,
+    },
+    history: {
+      bought: (total) => `${total}-ന്റെ സാധനം വാങ്ങി`,
+      atCounter: (amount) => `അപ്പോൾ തന്നെ ${amount} തന്നു`,
+      extra: (amount) => `${amount} കൂടുതൽ`,
+      linkSent: (amount) => `${amount}-ന്റെ link അയച്ചു`,
+    },
     pending: 'ബാക്കി',
     settled: 'തന്നത്',
     today: 'ഇന്ന്',

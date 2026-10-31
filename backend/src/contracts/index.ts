@@ -59,6 +59,9 @@ export const MatchBody = z.union([
   z.object({ reject: z.literal(true) }),
 ]);
 
+/** "Nahi" to one suggestion of a waiting payment. */
+export const DeclineBody = z.object({ entryId: z.string().min(4) });
+
 /** `language` picks the voice; it defaults to the merchant's. */
 export const TtsBody = z.object({ text: z.string().trim().min(1).max(2500), language: language.optional() });
 
@@ -138,10 +141,15 @@ export interface PaymentDto {
   createdAt: string;
 }
 
+/** A payment matched to an entry. `appliedRupees` is what went in: less than `amountRupees` when it was more than was owed. */
+export interface EntryPaymentDto extends PaymentDto {
+  appliedRupees: number;
+}
+
 /** An entry as the ledger lists it: with its latest payment link and the payments matched to it. */
 export interface LedgerEntryDto extends EntryDto {
   link: LinkDto | null;
-  payments: PaymentDto[];
+  payments: EntryPaymentDto[];
 }
 
 export interface CandidateDto {

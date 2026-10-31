@@ -107,6 +107,17 @@ export const od: Strings = {
     linkSent: 'link ଗଲା',
     paid: (amount) => `${amount} ଦେଲେ`,
     nothingPaid: 'ଏପର୍ଯ୍ୟନ୍ତ କିଛି ଦେଇନାହାନ୍ତି',
+    paidBy: {
+      qr: (amount) => `QR ରେ ${amount} ଦେଲେ`,
+      cash: (amount) => `ନଗଦରେ ${amount} ଦେଲେ`,
+      link: (amount) => `link ରେ ${amount} ଦେଲେ`,
+    },
+    history: {
+      bought: (total) => `${total} ର ଜିନିଷ ନେଲେ`,
+      atCounter: (amount) => `ସେତେବେଳେ ${amount} ଦେଲେ`,
+      extra: (amount) => `${amount} ଅଧିକ`,
+      linkSent: (amount) => `${amount} ର link ଗଲା`,
+    },
     pending: 'ବାକି',
     settled: 'ଦେଲେ',
     today: 'ଆଜି',

@@ -47,6 +47,7 @@ graph TD
 * **Real-Time Financial Metrics**: Instant snapshot of "To collect" (total pending credit), "Collected today", and "Open entries".
 * **Daily Grouped Entries**: Chronological cards grouped by date with customer names, amounts, and statuses (`OPEN`, `CLOSED`, `REJECTED`).
 * **Filtering**: Seamlessly toggle between **All**, **Open**, and **Closed** entries.
+* **Entry History**: An open entry shows its latest payment (*"₹100 by QR"*). Tap any entry to see what was bought, what was paid at the counter, any link, and each payment since, with any extra paid on top.
 
 ### 3. Shop QR (Counter UPI Code)
 * **Dynamic UPI QR Code**: Renders the shop's payment intent payload.

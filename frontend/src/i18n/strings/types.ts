@@ -100,6 +100,17 @@ export type Strings = {
     linkSent: string;
     paid: (amount: string) => string;
     nothingPaid: string;
+    /** The latest payment on an open entry, and each payment in an entry's history. */
+    paidBy: { qr: (amount: string) => string; cash: (amount: string) => string; link: (amount: string) => string };
+    /** Under an entry once it's tapped, oldest first. */
+    history: {
+      bought: (total: string) => string;
+      /** Paid when the entry was spoken. */
+      atCounter: (amount: string) => string;
+      /** After a payment: the part of it that was more than was owed. */
+      extra: (amount: string) => string;
+      linkSent: (amount: string) => string;
+    };
     /** Under an open entry's amount. */
     pending: string;
     /** Under a closed entry's amount. */

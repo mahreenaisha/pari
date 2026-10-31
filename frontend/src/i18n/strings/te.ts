@@ -106,6 +106,17 @@ export const te: Strings = {
     linkSent: 'link వెళ్ళింది',
     paid: (amount) => `${amount} ఇచ్చారు`,
     nothingPaid: 'ఇంకా ఏమీ ఇవ్వలేదు',
+    paidBy: {
+      qr: (amount) => `QR తో ${amount} ఇచ్చారు`,
+      cash: (amount) => `నగదుగా ${amount} ఇచ్చారు`,
+      link: (amount) => `link తో ${amount} ఇచ్చారు`,
+    },
+    history: {
+      bought: (total) => `${total} సామాను తీసుకున్నారు`,
+      atCounter: (amount) => `అప్పుడే ${amount} ఇచ్చారు`,
+      extra: (amount) => `${amount} ఎక్కువ`,
+      linkSent: (amount) => `${amount} కి link వెళ్ళింది`,
+    },
     pending: 'బాకీ',
     settled: 'ఇచ్చింది',
     today: 'ఈరోజు',

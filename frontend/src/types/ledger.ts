@@ -16,8 +16,10 @@ export type Customer = {
 };
 
 export type Payment = {
-  /** Paise. */
+  /** Paise that went into the entry. */
   amount: number;
+  /** Paise paid on top of what was owed. */
+  extra?: number;
   method: PaymentMethod;
   /** ISO-8601 timestamp. */
   at: string;

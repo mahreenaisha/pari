@@ -50,9 +50,22 @@ import { toPaise, toRupees } from "../ledger/state.js";
 interface QrTurn {
   paymentId: string;
   amountRupees: number;
-  candidateEntryIds: string[];
-  index: number;
+  /** The entry Pari asked about. */
+  entryId: string;
 }
+
+/** A waiting payment Pari is asking about aloud, and the entry she asked about. */
+export interface QrQuestion {
+  paymentId: string;
+  entryId: string;
+}
+
+/** Questions about sending a link for `Session.entryId`, which end once that entry is paid off. */
+const LINK_QUESTIONS: ReadonlySet<ConversationState> = new Set([
+  "AWAITING_COLLECT_CHOICE",
+  "AWAITING_PHONE",
+  "AWAITING_PHONE_CONFIRM",
+]);
 
 /** "Gupta didi aur Gupta ji ek hi hain?", asked about each customer the name only maybe fits. */
 interface CustomerChoice {
@@ -143,6 +156,15 @@ export class ConversationEngine {
         void this.withLock(merchantId, () => this.offerSuggestion(merchantId, event.suggestion)).catch((err) =>
           deps.logger?.error({ err }, "could not start QR turn"),
         );
+      } else if (event.type === "entry.updated" && event.entry.status === "CLOSED") {
+        const entryId = event.entry.id;
+        void this.withLock(merchantId, async () => {
+          const session = this.sessions.get(merchantId);
+          if (session?.entryId === entryId && LINK_QUESTIONS.has(session.state)) {
+            this.toIdle(session);
+            session.updatedAt = Date.now();
+          }
+        });
       }
     });
   }
@@ -180,40 +202,64 @@ export class ConversationEngine {
     return this.getSession(merchantId);
   }
 
+  /** The waiting payment Pari is asking about aloud, if any, so the QR tab shows the same question. */
+  qrQuestion(merchantId: string): QrQuestion | null {
+    const session = this.getSession(merchantId);
+    if (session.state === "AWAITING_QR_MATCH" && session.qr) {
+      return { paymentId: session.qr.paymentId, entryId: session.qr.entryId };
+    }
+    if (session.state === "AWAITING_PAYMENT_CONFIRM" && session.payment?.qr) return session.payment.qr;
+    return null;
+  }
+
   /** The merchant settled this payment by tap, so a pending spoken question about it is dropped. */
   releasePayment(merchantId: string, paymentId: string): Promise<void> {
     return this.withLock(merchantId, async () => {
-      const session = this.sessions.get(merchantId);
-      const asked =
-        session?.state === "AWAITING_QR_MATCH"
-          ? session.qr?.paymentId
-          : session?.state === "AWAITING_PAYMENT_CONFIRM"
-            ? session.payment?.qr?.paymentId
-            : undefined;
-      if (session && asked === paymentId) {
-        this.toIdle(session);
-        session.updatedAt = Date.now();
+      if (this.qrQuestion(merchantId)?.paymentId !== paymentId) return;
+      const session = this.getSession(merchantId);
+      this.toIdle(session);
+      session.updatedAt = Date.now();
+    });
+  }
+
+  /**
+   * "Nahi" tapped for one suggestion of a waiting payment. If it's the one Pari is asking about aloud, it
+   * answers her like the spoken word, and her next question goes out as a prompt. Otherwise the suggestion is
+   * dropped, and the payment is kept aside once none are left: the line to say then is returned.
+   */
+  declinePayment(merchantId: string, paymentId: string, entryId: string): Promise<Line | null> {
+    return this.withLock(merchantId, async () => {
+      const asked = this.qrQuestion(merchantId);
+      if (asked?.paymentId === paymentId && asked.entryId === entryId) {
+        const turn = await this.respond(this.getSession(merchantId), "nahi");
+        this.deps.events.publish(merchantId, { type: "pari.prompt", state: turn.state, line: turn.reply });
+        return null;
       }
+      const { candidates } = await this.deps.reconciler.declineCandidate(merchantId, paymentId, entryId);
+      if (candidates.length) return null;
+      return (await this.deps.reconciler.dismissPayment(merchantId, paymentId, "UNMATCHED")).line;
     });
   }
 
   handle(merchantId: string, text: string): Promise<TurnResult> {
-    return this.withLock(merchantId, async () => {
-      const session = this.getSession(merchantId);
-      session.language = await this.deps.languages.get(merchantId);
-      let step = await this.dispatch(session, text.trim());
-      if (step.state === "IDLE") {
-        this.toIdle(session);
-        step = await this.whatNext(session, step);
-      }
-      if (session.dropped.length) {
-        step = { ...step, reply: joinLines(linesFor(session.language).unsaved(session.dropped.join(", ")), step.reply) };
-        session.dropped = [];
-      }
-      session.state = step.state;
-      session.updatedAt = Date.now();
-      return { sessionId: session.id, ...step };
-    });
+    return this.withLock(merchantId, () => this.respond(this.getSession(merchantId), text));
+  }
+
+  /** One turn. Callers hold the merchant's lock. */
+  private async respond(session: Session, text: string): Promise<TurnResult> {
+    session.language = await this.deps.languages.get(session.merchantId);
+    let step = await this.dispatch(session, text.trim());
+    if (step.state === "IDLE") {
+      this.toIdle(session);
+      step = await this.whatNext(session, step);
+    }
+    if (session.dropped.length) {
+      step = { ...step, reply: joinLines(linesFor(session.language).unsaved(session.dropped.join(", ")), step.reply) };
+      session.dropped = [];
+    }
+    session.state = step.state;
+    session.updatedAt = Date.now();
+    return { sessionId: session.id, ...step };
   }
 
   private async withLock<T>(merchantId: string, fn: () => Promise<T>): Promise<T> {
@@ -573,6 +619,7 @@ export class ConversationEngine {
       return { state: "IDLE", reply: res.line, ...(res.entry ? { entry: res.entry } : {}) };
     }
     if (answer === "no") {
+      await this.deps.reconciler.declineCandidate(session.merchantId, qr.paymentId, qr.entryId);
       payment.qr = null;
       return {
         state: "AWAITING_PAYMENT_CONFIRM",
@@ -789,8 +836,7 @@ export class ConversationEngine {
     session.qr = {
       paymentId: suggestion.payment.id,
       amountRupees: suggestion.payment.amountRupees,
-      candidateEntryIds: suggestion.candidates.map((c) => c.entry.id),
-      index: 0,
+      entryId: first.entry.id,
     };
     return {
       state: "AWAITING_QR_MATCH",
@@ -803,21 +849,20 @@ export class ConversationEngine {
   private async onQrAnswer(session: Session, text: string, answer: YesNo): Promise<Step> {
     const say = linesFor(session.language);
     const qr = session.qr!;
-    const entryId = qr.candidateEntryIds[qr.index]!;
     if (answer === "yes") {
-      const res = await this.deps.reconciler.matchPayment(session.merchantId, qr.paymentId, entryId);
+      const res = await this.deps.reconciler.matchPayment(session.merchantId, qr.paymentId, qr.entryId);
       this.toIdle(session);
       return { state: "IDLE", reply: res.line, ...(res.entry ? { entry: res.entry } : {}) };
     }
     if (answer === "no") {
-      qr.index += 1;
-      const nextId = qr.candidateEntryIds[qr.index];
-      if (nextId) {
-        const entry = await getEntry(this.deps.db, session.merchantId, nextId);
+      const { candidates } = await this.deps.reconciler.declineCandidate(session.merchantId, qr.paymentId, qr.entryId);
+      const next = candidates[0];
+      if (next) {
+        qr.entryId = next.entry.id;
         return {
           state: "AWAITING_QR_MATCH",
-          reply: say.qrAsk(qr.amountRupees, entry.customer_name, toRupees(entry.pending_paise)),
-          entry: toEntryDto(entry),
+          reply: say.qrAsk(qr.amountRupees, next.entry.customer.name, next.entry.pendingRupees),
+          entry: next.entry,
         };
       }
       const res = await this.deps.reconciler.dismissPayment(session.merchantId, qr.paymentId, "UNMATCHED");

@@ -29,7 +29,7 @@ export function toLedgerEntryDto(e: EntryWithCustomer, history: EntryHistory): L
   return {
     ...toEntryDto(e),
     link: history.link ? toLinkDto(history.link) : null,
-    payments: history.payments.map(toPaymentDto),
+    payments: history.payments.map((p) => ({ ...toPaymentDto(p), appliedRupees: toRupees(p.applied_paise) })),
   };
 }
 

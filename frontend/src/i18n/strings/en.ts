@@ -103,6 +103,17 @@ export const en: Strings = {
     linkSent: 'Link sent',
     paid: (amount) => `Paid ${amount}`,
     nothingPaid: 'Nothing paid yet',
+    paidBy: {
+      qr: (amount) => `${amount} by QR`,
+      cash: (amount) => `${amount} in cash`,
+      link: (amount) => `${amount} by link`,
+    },
+    history: {
+      bought: (total) => `Bought goods for ${total}`,
+      atCounter: (amount) => `${amount} paid at the counter`,
+      extra: (amount) => `${amount} extra`,
+      linkSent: (amount) => `Link for ${amount} sent`,
+    },
     pending: 'pending',
     settled: 'paid',
     today: 'Today',

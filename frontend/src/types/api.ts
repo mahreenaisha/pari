@@ -72,9 +72,12 @@ export type PaymentDto = {
   createdAt: string;
 };
 
+/** `appliedRupees` is what went into the entry: less than `amountRupees` when it was more than was owed. */
+export type EntryPaymentDto = PaymentDto & { appliedRupees: number };
+
 export type LedgerEntryDto = EntryDto & {
   link: LinkDto | null;
-  payments: PaymentDto[];
+  payments: EntryPaymentDto[];
 };
 
 export type CandidateDto = {
@@ -86,6 +89,12 @@ export type CandidateDto = {
 export type SuggestionDto = {
   payment: PaymentDto;
   candidates: CandidateDto[];
+};
+
+/** The waiting payment Pari is asking about aloud, and the entry she asked about. */
+export type QrQuestionDto = {
+  paymentId: string;
+  entryId: string;
 };
 
 export type MerchantDto = {

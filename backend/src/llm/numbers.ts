@@ -85,6 +85,7 @@ function tokenize(text: string): string[] {
     .replace(/(\d),(?=\d)/g, "$1")
     .replace(/[₹]/g, " ")
     .replace(/[^\p{L}\p{M}\p{N}.\s]/gu, " ")
+    .replace(/(?<!\d)\.|\.(?!\d)/g, " ")
     .split(/\s+/)
     .filter(Boolean);
 }

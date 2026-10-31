@@ -40,6 +40,10 @@ describe("extractNumbers", () => {
     ["हज़ार का सामान", [1000]],
     ["sava sau", [125]],
     ["3 sau", [3]],
+    ["Ramesh Bhai paid fifty.", [50]],
+    ["Gupta ji paid 200.", [200]],
+    ["Rs.500 diye", [500]],
+    ["99.5 diye", [99.5]],
   ])("%s", (text, expected) => {
     expect(extractNumbers(text)).toEqual(expected);
   });

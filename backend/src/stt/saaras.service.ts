@@ -29,7 +29,8 @@ export class SaarasSpeechToText implements SpeechToText {
 
   async transcribe(audio: AudioInput, opts: TranscribeOptions): Promise<Transcription> {
     const client = getSarvamClient(this.env.SARVAM_API_KEY);
-    const keyterms = ["Pari", ...(opts.keyterms ?? [])].slice(0, 50);
+    // No default keyterms: "Pari" as one made Saaras write "Verma ji" and "dedh sau" as "Pari".
+    const keyterms = (opts.keyterms ?? []).slice(0, 50);
     try {
       const response = await client.speechToText.transcribe(
         {
@@ -37,7 +38,7 @@ export class SaarasSpeechToText implements SpeechToText {
           model: this.env.SARVAM_STT_MODEL as SarvamAI.SpeechToTextModel,
           mode: this.env.SARVAM_STT_MODE as SarvamAI.Mode,
           language_code: opts.language,
-          ...(this.env.SARVAM_STT_MODEL === "saaras:v4" ? { keyterms } : {}),
+          ...(this.env.SARVAM_STT_MODEL === "saaras:v4" && keyterms.length ? { keyterms } : {}),
         },
         SARVAM_REQUEST_OPTIONS,
       );

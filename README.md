@@ -92,7 +92,7 @@ flowchart TD
 ### A. The Voice & LLM Stack (Sarvam AI)
 * **Speech-to-Text (`saaras:v4`)**:
   * Runs in `codemix` mode and is told the merchant's language (e.g. `ta-IN`), because one-word answers like *"haan"* are too short to detect a language from.
-  * Given `"Pari"` as a keyterm. Customer names are not: in live tests a list of them made Saaras write one customer's name for another, which is harder to catch than a misheard name.
+  * Given no keyterms. In live tests, `"Pari"` as one made Saaras write *"Verma ji"* and *"dedh sau"* as "Pari", and a list of customer names made it write one customer's name for another, which is harder to catch than a misheard name.
 * **Large Language Model (`sarvam-105b-conversations`)**:
   * A **105-billion parameter Mixture-of-Experts (MoE)** foundation model hosted on Sarvam Cloud.
   * Configured with temperature `0.1`, JSON object schema enforcement, and optional reasoning effort control.

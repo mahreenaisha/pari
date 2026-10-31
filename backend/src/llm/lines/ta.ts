@@ -136,4 +136,25 @@ export const ta: LineBook = {
     text: "தொகை சரியா கேக்கல. இன்னொரு தடவை சொல்லுங்க.",
     speech: "தொகை சரியா கேக்கல. இன்னொரு தடவை சொல்லுங்க.",
   }),
+
+  newCustomer: () => ({ text: "புது கணக்கு.", speech: "புது கணக்கு." }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName}-உம் ${knownName}-உம் ஒரே ஆளா?`,
+    speech: `${spokenName}-உம் ${knownName}-உம் ஒரே ஆளா?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName} entry அடுத்தது. முதல்ல இது:`,
+    speech: `${nextCustomerName} entry அடுத்தது. முதல்ல இது:`,
+  }),
+
+  nextEntry: () => ({ text: "அடுத்த entry.", speech: "அடுத்த entry." }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames} entry save ஆகல.`,
+    speech: `${customerNames} entry save ஆகல.`,
+  }),
+
+  changeUnclear: () => ({ text: "என்ன மாத்தணும்னு புரியல.", speech: "என்ன மாத்தணும்னு புரியல." }),
 };

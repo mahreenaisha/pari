@@ -136,4 +136,25 @@ export const gu: LineBook = {
     text: "રકમ બરાબર સંભળાઈ નહીં. ફરી એક વાર બોલો.",
     speech: "રકમ બરાબર સંભળાઈ નહીં. ફરી એક વાર બોલો.",
   }),
+
+  newCustomer: () => ({ text: "નવું ખાતું.", speech: "નવું ખાતું." }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName} અને ${knownName} એક જ છે?`,
+    speech: `${spokenName} અને ${knownName} એક જ છે?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName} ની entry પછી. પહેલાં આ:`,
+    speech: `${nextCustomerName} ની entry પછી. પહેલાં આ:`,
+  }),
+
+  nextEntry: () => ({ text: "હવે આગલી entry.", speech: "હવે આગલી entry." }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames} ની entry save નહોતી થઈ.`,
+    speech: `${customerNames} ની entry save નહોતી થઈ.`,
+  }),
+
+  changeUnclear: () => ({ text: "શું બદલવું છે, સમજાયું નહીં.", speech: "શું બદલવું છે, સમજાયું નહીં." }),
 };

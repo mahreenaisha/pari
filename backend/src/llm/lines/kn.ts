@@ -136,4 +136,25 @@ export const kn: LineBook = {
     text: "ಮೊತ್ತ ಸರಿಯಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ಇನ್ನೊಮ್ಮೆ ಹೇಳಿ.",
     speech: "ಮೊತ್ತ ಸರಿಯಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ಇನ್ನೊಮ್ಮೆ ಹೇಳಿ.",
   }),
+
+  newCustomer: () => ({ text: "ಹೊಸ ಖಾತೆ.", speech: "ಹೊಸ ಖಾತೆ." }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName} ಮತ್ತು ${knownName} ಒಬ್ಬರೇನಾ?`,
+    speech: `${spokenName} ಮತ್ತು ${knownName} ಒಬ್ಬರೇನಾ?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName} ಅವರ entry ಆಮೇಲೆ. ಮೊದಲು ಇದು:`,
+    speech: `${nextCustomerName} ಅವರ entry ಆಮೇಲೆ. ಮೊದಲು ಇದು:`,
+  }),
+
+  nextEntry: () => ({ text: "ಈಗ ಮುಂದಿನ entry.", speech: "ಈಗ ಮುಂದಿನ entry." }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames} ಅವರ entry save ಆಗಿರಲಿಲ್ಲ.`,
+    speech: `${customerNames} ಅವರ entry save ಆಗಿರಲಿಲ್ಲ.`,
+  }),
+
+  changeUnclear: () => ({ text: "ಏನು ಬದಲಾಯಿಸಬೇಕು ಅಂತ ಅರ್ಥ ಆಗಲಿಲ್ಲ.", speech: "ಏನು ಬದಲಾಯಿಸಬೇಕು ಅಂತ ಅರ್ಥ ಆಗಲಿಲ್ಲ." }),
 };

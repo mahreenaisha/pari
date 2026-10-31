@@ -92,6 +92,8 @@ function turnScene(turn: Turn, answer: (text: 'haan' | 'nahi') => void, strings:
   };
 
   switch (turn.state) {
+    case 'AWAITING_CUSTOMER_CHOICE':
+      return { ...said, actions: [yes(common.yes), no(common.no)], footnote: listen.sayYes };
     case 'AWAITING_ENTRY_CONFIRM':
       return {
         ...said,

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { LANGUAGES, type Language } from "../src/contracts/index.js";
+import { customerKey, honorificGender, matchName } from "../src/ledger/names.js";
 import { EntryExtractor } from "../src/llm/extractor.js";
-import { detectYesNo, type YesNo } from "../src/llm/intent.js";
+import { detectYesNo, otherWords, type YesNo } from "../src/llm/intent.js";
 import {
   checkAmountsAgainstTranscript,
   extractNumbers,
@@ -11,7 +12,7 @@ import {
   toAsciiDigits,
 } from "../src/llm/numbers.js";
 import { linesFor } from "../src/llm/lines/index.js";
-import { completeAmounts } from "../src/llm/schemas.js";
+import { applyCorrection, completeAmounts } from "../src/llm/schemas.js";
 import { entryJson, FakeChat } from "./helpers.js";
 
 const DECK = "Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki.";
@@ -29,6 +30,12 @@ describe("extractNumbers", () => {
     ["do sau pachas", [250]],
     ["२०० दिए", [200]],
     ["5 hazaar", [5000]],
+    ["तीन सौ पैंतीस का सामान", [335]],
+    ["पचहत्तर रुपये दिए", [75]],
+    ["अड़तालीस बाकी", [48]],
+    ["सड़सठ", [67]],
+    ["एक हज़ार निन्यानवे", [1099]],
+    ["इक्कीस", [21]],
   ])("%s", (text, expected) => {
     expect(extractNumbers(text)).toEqual(expected);
   });
@@ -190,6 +197,55 @@ describe("completeAmounts", () => {
   it("treats a lone amount as pure udhar", () => {
     expect(completeAmounts(raw(500, null, null))).toEqual({ totalRupees: 500, paidRupees: 0, pendingRupees: 500 });
     expect(completeAmounts(raw(null, null, 150))).toEqual({ totalRupees: 150, paidRupees: 0, pendingRupees: 150 });
+  });
+});
+
+describe("applyCorrection", () => {
+  const before = { totalRupees: 350, paidRupees: 200, pendingRupees: 150 };
+  const said = (t: number | null, p: number | null, q: number | null) => ({ totalRupees: t, paidRupees: p, pendingRupees: q });
+  it.each([
+    ["a new paid amount keeps the total", said(null, 250, null), { totalRupees: 350, paidRupees: 250, pendingRupees: 100 }],
+    ["a new pending amount keeps the total", said(null, null, 100), { totalRupees: 350, paidRupees: 250, pendingRupees: 100 }],
+    ["a new total keeps what was paid", said(300, null, null), { totalRupees: 300, paidRupees: 200, pendingRupees: 100 }],
+    ["paid and pending make the total", said(null, 100, 300), { totalRupees: 400, paidRupees: 100, pendingRupees: 300 }],
+    ["a new total and paid work out pending", said(500, 100, null), { totalRupees: 500, paidRupees: 100, pendingRupees: 400 }],
+    ["nothing said keeps everything", said(null, null, null), before],
+  ])("%s", (_, change, expected) => {
+    expect(applyCorrection(change, before)).toEqual(expected);
+  });
+});
+
+describe("otherWords", () => {
+  it.each<[Language, string, string[]]>([
+    ["hi-IN", "haan, lekin 250 diye", ["lekin", "250", "diye"]],
+    ["hi-IN", "haan ji save kar do", []],
+    ["hi-IN", "nahi, abhi nahi", []],
+    ["ta-IN", "ஆமா, ஆனா இருநூறு கொடுத்தாரு", ["ஆனா", "இருநூறு", "கொடுத்தாரு"]],
+    ["ta-IN", "சரி சரி", []],
+  ])("%s: %s", (language, text, expected) => {
+    expect(otherWords(text, language)).toEqual(expected);
+  });
+});
+
+describe("matchName", () => {
+  it.each([
+    ["Gupta ji", "gupta JI", "exact"],
+    ["Guptha ji", "Gupta ji", "fuzzy"],
+    ["Gupta didi", "Gupta di", "exact"],
+    ["Gupta didi", "Gupta ji", "maybe"],
+    ["Murugan", "Murugan anna", "maybe"],
+    ["Gupta didi", "Gupta bhaiya", null],
+    ["Murugan akka", "Murugan anna", null],
+    ["Mehta ji", "Gupta ji", null],
+  ])("%s for %s: %s", (spoken, known, expected) => {
+    expect(matchName(spoken, known)).toBe(expected);
+  });
+
+  it("keys a customer by name and whether the honorific says man or woman", () => {
+    expect(customerKey("Gupta ji")).toBe("gupta");
+    expect(customerKey("Gupta Didi")).toBe("gupta ~f");
+    expect(customerKey("Mr. Gupta")).toBe("gupta ~m");
+    expect(honorificGender("Ravi garu")).toBeNull();
   });
 });
 

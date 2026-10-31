@@ -62,6 +62,12 @@ const cases: { key: keyof Lines; note: string; say: (lines: Lines) => Line; keep
   { key: "notUnderstoodYesNo", note: "", say: (l) => l.notUnderstoodYesNo(), keeps: [] },
   { key: "notAnEntry", note: "", say: (l) => l.notAnEntry(), keeps: [] },
   { key: "amountsUnclear", note: "", say: (l) => l.amountsUnclear(), keeps: [] },
+  { key: "newCustomer", note: "", say: (l) => l.newCustomer(), keeps: [] },
+  { key: "sameCustomer", note: "", say: (l) => l.sameCustomer("Gupta didi", "Gupta ji"), keeps: ["Gupta didi", "Gupta ji"] },
+  { key: "pendingFirst", note: "", say: (l) => l.pendingFirst("Verma ji"), keeps: ["Verma ji"] },
+  { key: "nextEntry", note: "", say: (l) => l.nextEntry(), keeps: [] },
+  { key: "unsaved", note: "", say: (l) => l.unsaved("Gupta ji, Verma ji"), keeps: ["Gupta ji, Verma ji"] },
+  { key: "changeUnclear", note: "", say: (l) => l.changeUnclear(), keeps: [] },
 ];
 
 it("tests every line", () => {

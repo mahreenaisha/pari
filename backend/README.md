@@ -56,13 +56,13 @@ Keys while Pari is listening:
 ## Demo script
 
 1. Say *"Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki."*
-2. Pari answers *"Gupta ji, total ₹350, ₹200 mile, ₹150 baaki. Save karoon?"* Say **"haan"**, or **"nahi, 250 diye"** to correct it.
+2. Pari answers *"Gupta ji, total ₹350, ₹200 mile, ₹150 baaki. Save karoon?"* Say **"haan"**, or **"nahi, 250 diye"** to correct it. A different amount corrects it even after a yes: *"haan, lekin 250 diye"*.
 3. Pari asks *"₹150 ka payment link bhejun?"* Say **"haan"**, then the number: *"98765 43210"*. Pari reads it back. Say **"haan"** and the link is sent.
 4. Press **L**. Pari announces *"Gupta ji ne ₹150 de diye. Khaata band."*
 5. Make a second entry and answer **"nahi"** when Pari offers a link. Press **Q**. Pari asks *"₹150 aaya, Gupta ji ka?"*. Say **"haan"** and the entry closes.
 6. Press **E** to see everything.
 
-Also try: a number that isn't a mobile number ("ek do teen") and Pari asks again; a fully paid entry ("poora de diya") closes at once with no link.
+Also try: a number that isn't a mobile number ("ek do teen") and Pari asks again; a fully paid entry ("poora de diya") closes at once with no link; someone else's entry before answering ("Verma ji ko 150 udhaar"), which Pari reads back once the first is done; *"Gupta didi ne 200 ka samaan liya"*, and Pari asks whether Gupta didi and Gupta ji are the same person.
 
 ## API for a frontend
 
@@ -99,7 +99,7 @@ Set `PARI_PAYTM_MODE=sandbox`, `PAYTM_MID` and `PAYTM_MERCHANT_KEY` (16 characte
 
 ## Tests
 
-`npm test` runs about 470 tests with no network: number parsing, extraction checks, Pari's lines in all 11 languages, entry states, the reconciler, the conversation engine, the HTTP API and an end-to-end run through the terminal's API client against a live server. The LLM, speech and Paytm are all faked. `npm run typecheck` and `npm run build` should both be clean.
+`npm test` runs about 570 tests with no network: number parsing, extraction checks, Pari's lines in all 11 languages, entry states, the reconciler, the conversation engine, the HTTP API and an end-to-end run through the terminal's API client against a live server. The LLM, speech and Paytm are all faked. `npm run typecheck` and `npm run build` should both be clean.
 
 ## Layout
 

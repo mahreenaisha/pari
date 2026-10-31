@@ -19,6 +19,7 @@ export const pa: Strings = {
   listen: {
     hints: {
       IDLE: 'ਕਿਸ ਨੇ ਕੀ ਲਿਆ, ਤੇ ਕਿੰਨੇ ਦਿੱਤੇ।',
+      AWAITING_CUSTOMER_CHOICE: 'ਹਾਂ ਜਾਂ ਨਹੀਂ?',
       AWAITING_ENTRY_CONFIRM: 'ਹਾਂ, ਨਹੀਂ, ਜਾਂ ਕੀ ਬਦਲਣਾ ਹੈ।',
       AWAITING_COLLECT_CHOICE: 'ਹਾਂ ਜਾਂ ਨਹੀਂ?',
       AWAITING_PHONE: 'ਦਸੇ ਅੰਕ ਬੋਲੋ।',

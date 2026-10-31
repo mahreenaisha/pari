@@ -136,4 +136,25 @@ export const bn: LineBook = {
     text: "টাকার অঙ্ক পরিষ্কার শোনা গেল না। আর একবার বলুন।",
     speech: "টাকার অঙ্ক পরিষ্কার শোনা গেল না। আর একবার বলুন।",
   }),
+
+  newCustomer: () => ({ text: "নতুন খাতা।", speech: "নতুন খাতা।" }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName} আর ${knownName} কি একই মানুষ?`,
+    speech: `${spokenName} আর ${knownName} কি একই মানুষ?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName}-এর entry এর পরে। আগে এটা:`,
+    speech: `${nextCustomerName}-এর entry এর পরে। আগে এটা:`,
+  }),
+
+  nextEntry: () => ({ text: "এবার পরের entry।", speech: "এবার পরের entry।" }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames}-এর entry save হয়নি।`,
+    speech: `${customerNames}-এর entry save হয়নি।`,
+  }),
+
+  changeUnclear: () => ({ text: "কী বদলাতে হবে, বুঝতে পারলাম না।", speech: "কী বদলাতে হবে, বুঝতে পারলাম না।" }),
 };

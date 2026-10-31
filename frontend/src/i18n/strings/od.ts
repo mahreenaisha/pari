@@ -20,6 +20,7 @@ export const od: Strings = {
   listen: {
     hints: {
       IDLE: 'କିଏ କଣ ନେଲେ, ଆଉ କେତେ ଦେଲେ।',
+      AWAITING_CUSTOMER_CHOICE: 'ହଁ କି ନା?',
       AWAITING_ENTRY_CONFIRM: 'ହଁ, ନା, କିମ୍ବା କଣ ବଦଳାଇବାକୁ ହେବ।',
       AWAITING_COLLECT_CHOICE: 'ହଁ କି ନା?',
       AWAITING_PHONE: 'ଦଶଟି ଯାକ ଅଙ୍କ କୁହନ୍ତୁ।',

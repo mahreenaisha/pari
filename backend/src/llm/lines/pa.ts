@@ -136,4 +136,25 @@ export const pa: LineBook = {
     text: "ਰਕਮ ਸਾਫ਼ ਸੁਣਾਈ ਨਹੀਂ ਦਿੱਤੀ। ਇੱਕ ਵਾਰ ਫਿਰ ਬੋਲੋ।",
     speech: "ਰਕਮ ਸਾਫ਼ ਸੁਣਾਈ ਨਹੀਂ ਦਿੱਤੀ। ਇੱਕ ਵਾਰ ਫਿਰ ਬੋਲੋ।",
   }),
+
+  newCustomer: () => ({ text: "ਨਵਾਂ ਖਾਤਾ।", speech: "ਨਵਾਂ ਖਾਤਾ।" }),
+
+  sameCustomer: (spokenName, knownName) => ({
+    text: `${spokenName} ਅਤੇ ${knownName} ਇੱਕੋ ਹੀ ਹਨ?`,
+    speech: `${spokenName} ਅਤੇ ${knownName} ਇੱਕੋ ਹੀ ਹਨ?`,
+  }),
+
+  pendingFirst: (nextCustomerName) => ({
+    text: `${nextCustomerName} ਦੀ entry ਇਸ ਤੋਂ ਬਾਅਦ। ਪਹਿਲਾਂ ਇਹ:`,
+    speech: `${nextCustomerName} ਦੀ entry ਇਸ ਤੋਂ ਬਾਅਦ। ਪਹਿਲਾਂ ਇਹ:`,
+  }),
+
+  nextEntry: () => ({ text: "ਹੁਣ ਅਗਲੀ entry।", speech: "ਹੁਣ ਅਗਲੀ entry।" }),
+
+  unsaved: (customerNames) => ({
+    text: `${customerNames} ਦੀ entry save ਨਹੀਂ ਹੋਈ ਸੀ।`,
+    speech: `${customerNames} ਦੀ entry save ਨਹੀਂ ਹੋਈ ਸੀ।`,
+  }),
+
+  changeUnclear: () => ({ text: "ਕੀ ਬਦਲਣਾ ਹੈ, ਸਮਝ ਨਹੀਂ ਆਇਆ।", speech: "ਕੀ ਬਦਲਣਾ ਹੈ, ਸਮਝ ਨਹੀਂ ਆਇਆ।" }),
 };

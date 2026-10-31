@@ -19,6 +19,7 @@ export const bn: Strings = {
   listen: {
     hints: {
       IDLE: 'কে কী নিলেন, আর কত দিলেন।',
+      AWAITING_CUSTOMER_CHOICE: 'হ্যাঁ নাকি না?',
       AWAITING_ENTRY_CONFIRM: 'হ্যাঁ, না, অথবা কী বদলাতে হবে।',
       AWAITING_COLLECT_CHOICE: 'হ্যাঁ নাকি না?',
       AWAITING_PHONE: 'দশটা সংখ্যাই বলুন।',

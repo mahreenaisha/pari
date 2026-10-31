@@ -44,4 +44,16 @@ export interface LineBook {
   notUnderstoodYesNo(): Said;
   notAnEntry(): Said;
   amountsUnclear(): Said;
+  /** Before the read-back of an entry for someone not in the khaata yet. */
+  newCustomer(): Said;
+  /** The spoken name fits a customer, but only one of the two honorifics says man or woman. */
+  sameCustomer(spokenName: string, knownName: string): Said;
+  /** Someone else's entry was said while this one waits; comes before its read-back again. */
+  pendingFirst(nextCustomerName: string): Said;
+  /** Before the read-back of an entry said earlier. */
+  nextEntry(): Said;
+  /** The session ran out before these customers' entries got a yes. */
+  unsaved(customerNames: string): Said;
+  /** The answer sounded like a change that couldn't be read; comes before the read-back again. */
+  changeUnclear(): Said;
 }

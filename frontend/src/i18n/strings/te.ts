@@ -19,6 +19,7 @@ export const te: Strings = {
   listen: {
     hints: {
       IDLE: 'ఎవరు ఏమి కొన్నారు, ఎంత ఇచ్చారు.',
+      AWAITING_CUSTOMER_CHOICE: 'అవునా కాదా?',
       AWAITING_ENTRY_CONFIRM: 'అవును, కాదు, లేదా ఏమి మార్చాలో.',
       AWAITING_COLLECT_CHOICE: 'అవునా కాదా?',
       AWAITING_PHONE: 'పది అంకెలూ చెప్పండి.',

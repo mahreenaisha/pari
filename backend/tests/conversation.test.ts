@@ -282,6 +282,17 @@ describe("Pari in the merchant's language", () => {
     });
   });
 
+  it("takes a Bengali number for the link even though নয় (nine) also means no", async () => {
+    const BENGALI = "ঘোষবাবু 350 টাকার জিনিস নিলেন, 200 দিলেন, 150 বাকি";
+    await request(t.app).patch("/api/me").set(auth).send({ language: "bn-IN" }).expect(200);
+    t.chat.set(BENGALI, entryJson("Ghosh babu", 350, 200, 150));
+    await say(BENGALI);
+    expect(await say("হ্যাঁ")).toMatchObject({ state: "AWAITING_COLLECT_CHOICE" });
+
+    const turn = await say("নয় আট সাত ছয় পাঁচ চার তিন দুই এক শূন্য");
+    expect(turn).toMatchObject({ state: "AWAITING_PHONE_CONFIRM", reply: { key: "phoneReadback", text: expect.stringContaining("98765 43210") } });
+  });
+
   it("keeps Hindi for a merchant who hasn't picked a language", async () => {
     const turn = await say(DECK);
     expect(turn.reply).toMatchObject({ language: "hi-IN", key: "entryReadback" });

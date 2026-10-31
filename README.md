@@ -120,7 +120,7 @@ Financial records cannot rely on unconstrained generative output. Pari enforces 
      * *sau* ($100$), *hazaar* ($1,000$), *lakh* ($100,000$).
      * *dedh* ($1.5$), *dhai* ($2.5$), *saade* ($+0.5$), *sava* ($+0.25$), *paune* ($-0.25$).
      * e.g., *"saade teen sau"* $\rightarrow 350$, *"dedh sau"* $\rightarrow 150$.
-   * Parses spoken 10-digit Indian mobile numbers (digits in any Indian script, Devanagari and Romanized Hindi or English digit words, and repeats like *"double nine"*).
+   * Parses spoken 10-digit Indian mobile numbers (digits in any Indian script, digit words in all 11 languages, and repeats like *"double nine"*).
 3. **Formal Accounting Invariants**:
    * Recomputes single missing fields ($Total = Paid + Pending$).
    * Formally verifies with [`checkAmountsAgainstTranscript`](backend/src/llm/numbers.ts) that every non-zero amount was explicitly uttered or directly derived. Flags unverified amounts with `needsReview: true`.
@@ -130,7 +130,7 @@ Financial records cannot rely on unconstrained generative output. Pari enforces 
 ### C. Eleven Languages
 Pari works fully in the 11 languages Bulbul can speak: Hindi, English, Bengali, Tamil, Telugu, Kannada, Malayalam, Marathi, Gujarati, Punjabi and Odia. The app asks for the language on first launch and saves it with `PATCH /api/me`; a chip on the Listen screen changes it later. Until one is picked, Pari uses Hindi.
 
-* **Hearing**: Saaras is told the merchant's language. Each language has its own yes and no words, and Hindi and English ones count in all of them, so the app's buttons always send *"haan"* or *"nahi"*. Digits in any Indian script become 0–9, but number *words* are only parsed in Hindi and English, so the other languages rely on Saaras writing amounts as digits.
+* **Hearing**: Saaras is told the merchant's language. Each language has its own yes and no words, and Hindi and English ones count in all of them, so the app's buttons always send *"haan"* or *"nahi"*. Digits in any Indian script become 0–9, and a phone number read out digit by digit is understood in every language. Amount *words* are only parsed in Hindi and English, and Saaras usually spells amounts out in the other languages. The LLM still reads them, but Pari can't check them against the transcript, so she flags the entry and asks the merchant to listen carefully to the read-back.
 * **Text**: Pari's lines live in [`backend/src/llm/lines/`](backend/src/llm/lines) and the app's text in [`frontend/src/i18n/strings/`](frontend/src/i18n/strings), one typed table per language, so a missing line fails the typecheck.
 * **Voices** ([`backend/src/tts/voices.ts`](backend/src/tts/voices.ts)) are all female, so Pari sounds like one person. Bulbul v4 has no Malayalam or Odia voice and no female Tamil or clearly female Punjabi one, so those four use v3's general voice:
 
@@ -320,7 +320,7 @@ npm run pari
 
 ### Testing & Verification
 ```bash
-# Run unit, integration, and E2E mock suites (about 460 tests without network dependency)
+# Run unit, integration, and E2E mock suites (about 470 tests without network dependency)
 npm test
 
 # Type-check TypeScript sources

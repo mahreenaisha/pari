@@ -20,7 +20,7 @@ The terminal has no picker and follows whatever the app chose. To set it without
 curl -X PATCH localhost:4000/api/me -H "x-api-key: pari-dev-key" -H "content-type: application/json" -d '{"language":"ta-IN"}'
 ```
 
-Digits in any Indian script are converted, but number words are only parsed in Hindi and English, so the other languages rely on Saaras writing amounts and phone numbers as digits. The tables other than Hindi haven't been reviewed by native speakers yet.
+Digits in any Indian script are converted, and a phone number read out digit by digit is understood in every language. Amount words are only parsed in Hindi and English, and Saaras usually spells amounts out in the other languages, so those entries are flagged for review and Pari asks the merchant to listen carefully to the read-back. The tables other than Hindi haven't been reviewed by native speakers yet.
 
 ## Setup
 
@@ -99,7 +99,7 @@ Set `PARI_PAYTM_MODE=sandbox`, `PAYTM_MID` and `PAYTM_MERCHANT_KEY` (16 characte
 
 ## Tests
 
-`npm test` runs about 460 tests with no network: number parsing, extraction checks, Pari's lines in all 11 languages, entry states, the reconciler, the conversation engine, the HTTP API and an end-to-end run through the terminal's API client against a live server. The LLM, speech and Paytm are all faked. `npm run typecheck` and `npm run build` should both be clean.
+`npm test` runs about 470 tests with no network: number parsing, extraction checks, Pari's lines in all 11 languages, entry states, the reconciler, the conversation engine, the HTTP API and an end-to-end run through the terminal's API client against a live server. The LLM, speech and Paytm are all faked. `npm run typecheck` and `npm run build` should both be clean.
 
 ## Layout
 

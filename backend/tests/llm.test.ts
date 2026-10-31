@@ -95,6 +95,21 @@ describe("parseIndianMobile", () => {
     expect(parseIndianMobile("৯৮৭৬৫ ৪৩২১০")).toBe("9876543210");
   });
 
+  // What Saaras wrote for "9 8 7 6 5, 4 3 2 1 0" spoken by each language's Bulbul voice.
+  it.each([
+    ["Bengali", "নয় আট সাত ছয় পাঁচ চার তিন দুই এক শূন্য।"],
+    ["Tamil", "ஒன்பது எட்டு ஏழு ஆறு ஐந்து நான்கு மூன்று இரண்டு ஒன்று பூஜ்ஜியம்."],
+    ["Telugu", "తొమ్మిది ఎనిమిది ఏడు ఆరు ఐదు నాలుగు మూడు రెండు ఒకటి సున్నా."],
+    ["Kannada", "ಒಂಬತ್ತು ಎಂಟು ಏಳು ಆರು ಐದು ನಾಲ್ಕು ಮೂರು ಎರಡು ಒಂದು ಸೊನ್ನೆ."],
+    ["Malayalam", "ഒമ്പത് എട്ട് ഏഴ് ആറ് അഞ്ച് നാല് മൂന്ന് രണ്ട് ഒന്ന് പൂജ്യം."],
+    ["Marathi", "नऊ आठ सात सहा पाच चार तीन दोन एक शून्य."],
+    ["Gujarati", "નવ આઠ સાત છ પાંચ ચાર ત્રણ બે એક શૂન્ય."],
+    ["Punjabi", "ਨੌਂ ਅੱਠ ਸੱਤ ਛੇ ਪੰਜ ਚਾਰ ਤਿੰਨ ਦੋ ਇੱਕ ਸਿਫ਼ਰ।"],
+    ["Odia", "ନଅ ଆଠ ସାତ ଛଅ ପାଞ୍ଚ ଚାରି ତିନି ଦୁଇ ଏକ ଶୂନ୍ୟ।"],
+  ])("reads digits spoken in %s", (_language, text) => {
+    expect(parseIndianMobile(text)).toBe("9876543210");
+  });
+
   it("formats digits for speech", () => {
     expect(phoneForSpeech("9876543210")).toBe("9 8 7 6 5, 4 3 2 1 0");
   });

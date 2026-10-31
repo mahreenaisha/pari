@@ -2,6 +2,7 @@
  * Deterministic number handling. The LLM proposes amounts; these helpers
  * verify them against what was actually said, and parse phone numbers.
  */
+import type { Language } from "../contracts/index.js";
 
 /** Code point of 0 in Devanagari, Bengali, Gurmukhi, Gujarati, Odia, Tamil, Telugu, Kannada and Malayalam. */
 const INDIC_ZEROS = [0x0966, 0x09e6, 0x0a66, 0x0ae6, 0x0b66, 0x0be6, 0x0c66, 0x0ce6, 0x0d66];
@@ -171,6 +172,30 @@ const DIGIT_WORDS: Record<string, string> = {
   eight: "8", aath: "8", ath: "8", "आठ": "8", "एट": "8",
   nine: "9", nau: "9", "नौ": "9", "नाइन": "9",
 };
+/**
+ * 0 to 9 in each of the other languages, alternatives split by "|". Saaras usually spells out a number
+ * read digit by digit in these, e.g. "ஒன்பது எட்டு ஏழு..." rather than 987.
+ */
+const SCRIPT_DIGITS: Record<Exclude<Language, "hi-IN" | "en-IN">, string[]> = {
+  "bn-IN": ["শূন্য|জিরো", "এক", "দুই", "তিন", "চার", "পাঁচ", "ছয়", "সাত", "আট", "নয়"],
+  "ta-IN": ["பூஜ்ஜியம்|பூஜ்யம்|ஜீரோ", "ஒன்று|ஒண்ணு", "இரண்டு|ரெண்டு", "மூன்று|மூணு", "நான்கு|நாலு", "ஐந்து|அஞ்சு", "ஆறு", "ஏழு", "எட்டு", "ஒன்பது"],
+  "te-IN": ["సున్నా|జీరో", "ఒకటి", "రెండు", "మూడు", "నాలుగు", "ఐదు", "ఆరు", "ఏడు", "ఎనిమిది", "తొమ్మిది"],
+  "kn-IN": ["ಸೊನ್ನೆ|ಶೂನ್ಯ|ಜೀರೋ", "ಒಂದು", "ಎರಡು", "ಮೂರು", "ನಾಲ್ಕು", "ಐದು", "ಆರು", "ಏಳು", "ಎಂಟು", "ಒಂಬತ್ತು|ಒಂಭತ್ತು"],
+  "ml-IN": ["പൂജ്യം|സീറോ", "ഒന്ന്", "രണ്ട്", "മൂന്ന്", "നാല്", "അഞ്ച്", "ആറ്", "ഏഴ്", "എട്ട്", "ഒമ്പത്|ഒൻപത്"],
+  "mr-IN": ["शून्य", "एक", "दोन", "तीन", "चार", "पाच", "सहा", "सात", "आठ", "नऊ"],
+  "gu-IN": ["શૂન્ય|ઝીરો", "એક", "બે", "ત્રણ", "ચાર", "પાંચ", "છ", "સાત", "આઠ", "નવ"],
+  "pa-IN": ["ਸਿਫ਼ਰ|ਸਿਫਰ|ਜ਼ੀਰੋ", "ਇੱਕ|ਇਕ", "ਦੋ", "ਤਿੰਨ", "ਚਾਰ", "ਪੰਜ", "ਛੇ", "ਸੱਤ", "ਅੱਠ", "ਨੌਂ|ਨੌ"],
+  "od-IN": ["ଶୂନ୍ୟ|ଜିରୋ", "ଏକ", "ଦୁଇ", "ତିନି", "ଚାରି", "ପାଞ୍ଚ", "ଛଅ", "ସାତ", "ଆଠ", "ନଅ"],
+};
+// Keys go through the same NFKC as transcripts, so a nukta letter matches however it was encoded.
+const DIGIT_LOOKUP = new Map(
+  [
+    ...Object.entries(DIGIT_WORDS),
+    ...Object.values(SCRIPT_DIGITS).flatMap((words) =>
+      words.flatMap((alts, digit) => alts.split("|").map((w): [string, string] => [w, String(digit)])),
+    ),
+  ].map(([word, digit]) => [word.normalize("NFKC"), digit]),
+);
 const REPEAT: Record<string, number> = { double: 2, "डबल": 2, triple: 3, "ट्रिपल": 3 };
 
 /** Turns "98765 43210", "nau aath saat...", "double five ..." into a 10-digit Indian mobile, or null. */
@@ -178,6 +203,7 @@ export function parseIndianMobile(text: string): string | null {
   const tokens = toAsciiDigits(text)
     .normalize("NFKC")
     .toLowerCase()
+    .replace(/[\u200c\u200d]/g, "")
     .replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ")
     .split(/\s+/)
     .filter(Boolean);
@@ -188,7 +214,7 @@ export function parseIndianMobile(text: string): string | null {
       repeat = REPEAT[t]!;
       continue;
     }
-    const d = /^\d+$/.test(t) ? t : DIGIT_WORDS[t];
+    const d = /^\d+$/.test(t) ? t : DIGIT_LOOKUP.get(t);
     if (d !== undefined) {
       digits += d.length === 1 ? d.repeat(repeat) : d;
     }

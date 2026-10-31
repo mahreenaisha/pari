@@ -109,7 +109,6 @@ export function useVoiceAssistant() {
 
   const { start: startMic, stop: stopMic } = useMicrophone({
     onLevel: (value) => level.set(withTiming(value, { duration: 120 })),
-    onSilence: () => void finish(),
   });
 
   const listen = async () => {

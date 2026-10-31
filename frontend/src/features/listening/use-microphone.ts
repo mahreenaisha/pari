@@ -23,8 +23,8 @@ const MAX_MS = 20_000;
 type Handlers = {
   /** 0–1 loudness, about ten times a second. */
   onLevel: (level: number) => void;
-  /** The merchant spoke and went quiet, or never started. */
-  onSilence: () => void;
+  /** Optional: The merchant spoke and went quiet, or never started. If omitted, listens until stopped. */
+  onSilence?: () => void;
 };
 
 /** Records one clip at a time and notices when the speaker has finished. */
@@ -52,13 +52,28 @@ export function useMicrophone(handlers: Handlers) {
     recorder.record();
     recording.current = true;
 
-    const hear = silenceDetector(Date.now());
+    const hear = latest.current.onSilence ? silenceDetector(Date.now()) : undefined;
+    let smoothed: number | undefined;
+    let floor = -35;
+
     poll.current = setInterval(() => {
-      const { level, done } = hear(recorder.getStatus().metering, Date.now());
-      latest.current.onLevel(level);
-      if (done) {
-        stopPolling();
-        latest.current.onSilence();
+      const metering = recorder.getStatus().metering;
+      if (hear) {
+        const { level, done } = hear(metering, Date.now());
+        latest.current.onLevel(level);
+        if (done && latest.current.onSilence) {
+          stopPolling();
+          latest.current.onSilence();
+        }
+      } else {
+        if (metering !== undefined && metering > NO_SIGNAL_DB) {
+          smoothed = smoothed === undefined ? metering : smoothed + (metering - smoothed) * 0.5;
+          floor = Math.max(Math.min(floor, smoothed), -75);
+          const level = Math.min(1, Math.max(0, (smoothed - floor - 4) / 26));
+          latest.current.onLevel(level);
+        } else {
+          latest.current.onLevel(0);
+        }
       }
     }, POLL_MS);
     return true;

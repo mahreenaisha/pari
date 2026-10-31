@@ -30,7 +30,8 @@ export function toLedgerEntry(dto: EntryDto | LedgerEntryDto): LedgerEntry {
   const later: Payment[] =
     'payments' in dto
       ? dto.payments.map((p) => ({
-          amount: toPaise(p.amountRupees),
+          amount: toPaise(p.appliedRupees),
+          extra: toPaise(p.amountRupees) - toPaise(p.appliedRupees),
           method: METHOD[p.source],
           at: p.createdAt,
         }))

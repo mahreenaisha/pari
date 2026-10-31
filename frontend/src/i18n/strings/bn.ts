@@ -106,6 +106,17 @@ export const bn: Strings = {
     linkSent: 'link পাঠানো হয়েছে',
     paid: (amount) => `${amount} দিয়েছেন`,
     nothingPaid: 'এখনও কিছু দেননি',
+    paidBy: {
+      qr: (amount) => `QR-এ ${amount} দিয়েছেন`,
+      cash: (amount) => `নগদে ${amount} দিয়েছেন`,
+      link: (amount) => `link-এ ${amount} দিয়েছেন`,
+    },
+    history: {
+      bought: (total) => `${total}-এর জিনিস নিলেন`,
+      atCounter: (amount) => `তখনই ${amount} দিয়েছেন`,
+      extra: (amount) => `${amount} বেশি`,
+      linkSent: (amount) => `${amount}-এর link পাঠানো হয়েছে`,
+    },
     pending: 'বাকি',
     settled: 'শোধ',
     today: 'আজ',

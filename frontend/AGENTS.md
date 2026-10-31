@@ -1,41 +1,72 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+# 🤖 Agent Developer Guidelines — Pyari Pari Frontend
 
-## Expo has changed — do not trust your training data
+> [!IMPORTANT]
+> This is an **Expo SDK 58 / React Native 0.88** mobile application. Always prioritize mobile-first design patterns, 60fps gesture performance, and strict TypeScript types.
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+---
 
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+## ⚠️ Modern Expo Guidelines (Do Not Rely on Outdated Training Data)
 
-## Commands
+Expo evolves rapidly across major releases. APIs, lifecycle hooks, and configuration options change frequently. Before writing code touching Expo, React Native, or EAS APIs:
 
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
+1. **Verify the SDK Version**: Check the `"expo"` version in `package.json` (`~58.0.21`).
+2. **Consult Official Versioned Docs**: Refer to `https://docs.expo.dev/versions/v58.0.0/`.
+3. **Check LLMs Index**: Review [Expo LLMs Reference](https://docs.expo.dev/llms.txt) for documented corrections to common AI hallucinations. Always verify APIs against official documentation rather than generating from memory.
+
+---
+
+## 🛠️ Essential Commands
+
+> [!TIP]
+> If a `bun.lock` file is present, use `bunx` instead of `npx`. Otherwise, use standard `npx` / `npm`.
 
 ```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
+# Package Installation (ALWAYS use expo install to resolve SDK-compatible peer versions)
+npx expo install <package-name>
+
+# Development Server
+npx expo start
+
+# Verification & Diagnostics (Run before declaring any task complete)
+npm run lint         # npx expo lint
+npm run typecheck    # tsc --noEmit
+npx expo-doctor      # Diagnose configuration and dependency conflicts
+npx expo install --fix # Align mismatched package versions
 ```
 
-Run lint and typecheck before declaring any task done.
+---
 
-## Navigation & Routing
+## 🧭 Navigation & Routing (Expo Router)
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
+* **File-Based Routing**: All screens and route layouts live exclusively under `src/app/`.
+  * Every `.tsx` file in `src/app/` represents a route.
+  * `_layout.tsx` files define root navigators, providers, or tab wrappers.
+* **Separation of Concerns**: Keep non-route logic (custom hooks, UI components, business logic, state stores) strictly outside `src/app/` inside `src/features/`, `src/components/`, or `src/services/`.
+* **Navigation Utilities**: Import `Link`, `router`, and `useLocalSearchParams` directly from `expo-router`.
+* **Documentation**: See [Expo Router Documentation](https://docs.expo.dev/router/introduction/).
 
-## Building with EAS
+---
 
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
+## 📦 Native Builds & CNG (Continuous Native Generation)
 
-## Rules
+* **Config Plugins & App Config**:
+  * Native behavior must be declared in `app.json` and via Expo Config Plugins whenever possible.
+  * If native changes are required, avoid manual edits to `android/` or `ios/` unless directly troubleshooting prebuild outputs.
+* **Native Modules & Development Builds**:
+  * Libraries with custom native code (e.g. `expo-audio`, `@shopify/react-native-skia`) cannot run inside bare Expo Go.
+  * Always test with a development build:
+    ```bash
+    npx expo run:android   # or npx expo run:ios
+    ```
+* **Cloud Builds via EAS**:
+  * Use EAS Build for cloud signing and packaging: `npx eas-cli@latest build --profile development`.
+  * Documentation: [EAS Build Guide](https://docs.expo.dev/eas/index.md).
 
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+---
+
+## 📐 Architecture & Coding Standards
+
+1. **Strict i18n Typing**: Every user-facing UI string must be sourced through `useStrings()` from [`src/i18n/strings/`](src/i18n/strings/). The string interface is strictly typed; missing translations in any of the 11 supported languages will fail TypeScript compilation.
+2. **Financial Units**:
+   * Internal frontend states and UI formats deal with paise / rupees cleanly. Convert backend response types via [`src/services/`](src/services/).
+3. **Verification**: Always execute `npm run typecheck` and `npm run lint` before committing any code changes.

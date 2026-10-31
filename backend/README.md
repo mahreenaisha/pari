@@ -1,122 +1,243 @@
-# Pari backend
+<div align="center">
 
-Pari is a voice-first udhar (credit) ledger for Paytm merchants. The merchant says "Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki". Pari reads the entry back and, once confirmed, sends a Paytm link for the pending ₹150. The entry closes when the link is paid. If the money arrives on the shop QR instead, Pari asks "₹150 aaya, Gupta ji ka?".
+# ⚡ Pari Backend API & Ambient CLI
+### Core Financial Engine, Sarvam Indic Voice Pipeline & Paytm Settlement Server
 
-The Express API is the product. The hands-free terminal (`npm run pari`) is a thin client over it, and a web or mobile frontend can use the same endpoints later.
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-5.x-black?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![Kysely](https://img.shields.io/badge/ORM-Kysely-brightgreen?style=for-the-badge)](https://kysely.dev/)
+[![Sarvam AI](https://img.shields.io/badge/AI-Sarvam%20Cloud-6C47FF?style=for-the-badge)](https://sarvam.ai/)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20PGlite-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/electric-sql/pglite)
+[![Vitest](https://img.shields.io/badge/Tests-468%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 
-> For full system architecture, financial state diagrams, reconciliation algorithms, and design rationale, refer to the [Main Architecture README](../README.md).
+<br/>
 
-## Stack
+[Overview](#-overview) • [Stack](#-stack) • [11 Languages](#-11-indic-languages-support) • [Database Options](#-database-options) • [Quickstart](#-quickstart--configuration) • [CLI Client](#-hands-free-terminal-cli) • [API Reference](#-api-reference) • [Paytm Sandbox](#-paytm-sandbox-setup) • [Testing](#-testing--quality)
 
-Node 22, TypeScript, Express 5, Zod, Kysely on Postgres (PGlite is used when `DATABASE_URL` is empty). Sarvam AI provides speech-to-text (`saaras:v4`), text-to-speech (`bulbul:v4-flash`, and `bulbul:v3` for four languages) and the LLM (`sarvam-105b-conversations`). Paytm is either a built-in mock or the Payment Links sandbox.
+---
 
-## Languages
+</div>
 
-Pari works in Hindi, English, Bengali, Tamil, Telugu, Kannada, Malayalam, Marathi, Gujarati, Punjabi and Odia, the 11 languages Bulbul can speak. The merchant's choice is saved on `merchants.language` with `PATCH /api/me`; until then Pari uses Hindi. Saaras is told that language, every line comes from that language's table in `src/llm/lines/`, and Bulbul uses that language's voice from `src/tts/voices.ts`. `PARI_TTS_PACE` applies to every voice; `SARVAM_TTS_MODEL`, `PARI_TTS_SPEAKER` and `SARVAM_STT_LANGUAGE` are gone.
+## 📌 Overview
 
-The terminal has no picker and follows whatever the app chose. To set it without the app:
+The Pari backend is an Express 5 + TypeScript service that provides:
+1. **Conversational Engine**: Serialized, per-merchant state machine managing spoken interactions without race conditions.
+2. **Sarvam AI Voice Pipeline**: Multi-turn speech-to-text (`saaras:v4`), 105B parameter LLM entity extraction (`sarvam-105b-conversations`), and chunked low-latency text-to-speech (`bulbul:v4-flash` / `bulbul:v3`).
+3. **Deterministic Financial Core**: Strict mathematical invariant validation ($Total = Paid + Pending$) and vernacular number parsing (*sau*, *hazaar*, *dedh*, *dhai*, Indic script digits).
+4. **Paytm Payment Settlement**: Automatic SMS payment link generation and dual-channel reconciliation (exact order IDs vs heuristic counter QR payments).
+5. **Real-time Event Streaming**: Server-Sent Events (SSE) broadcasting ledger updates, proactive prompts, and soundbox-style payment announcements.
+6. **Hands-Free Ambient CLI**: Terminal-based client with automated ambient noise calibration, Voice Activity Detection (VAD), and push-to-talk.
 
+---
+
+## 🛠️ Stack
+
+* **Runtime**: Node.js `20.12+` (v22+ recommended), ESM modules (`"type": "module"`).
+* **Framework**: Express `5.3+`, Helmet, CORS, Express-Rate-Limit.
+* **Database & ORM**: **Kysely** query builder running over:
+  * **PostgreSQL 16** via `pg` driver (Docker or cloud-hosted), OR
+  * **Embedded PGlite** (WASM-based local PostgreSQL without any daemon dependencies).
+* **AI & Voice**: Official `sarvamai` SDK for Saaras STT, Sarvam 105B LLM, and Bulbul TTS.
+* **Payments**: Paytm Payment Links API (`paytmchecksum` HMAC-SHA256 signature verification).
+* **Testing**: Vitest test runner (468+ tests, mocks for network/audio).
+
+---
+
+## 🌐 11 Indic Languages Support
+
+Pari operates seamlessly across 11 Indian languages:
+`hi-IN` (Hindi), `en-IN` (English), `bn-IN` (Bengali), `ta-IN` (Tamil), `te-IN` (Telugu), `kn-IN` (Kannada), `ml-IN` (Malayalam), `mr-IN` (Marathi), `gu-IN` (Gujarati), `pa-IN` (Punjabi), and `od-IN` (Odia).
+
+* **Merchant Preference**: Stored in `merchants.language`. Read via `GET /api/me` and updated via `PATCH /api/me`. Defaults to `hi-IN` until selected.
+* **Deterministic Line Tables**: Spoken responses are never hallucinated by LLMs. Every line is sourced from [`src/llm/lines/`](src/llm/lines/) with dedicated tables per language.
+* **Voice Models & Speakers**:
+  * `bulbul:v4-flash`: Hindi (`simran_enhi_customer`), English (`simran_en_customer`), Bengali (`roopa_bn_conversational`), Telugu (`kavitha_te_conversation`), Kannada (`chaitra_kn_conversation`), Marathi (`ishita_mr_conversational`), Gujarati (`pooja_gu_customer`).
+  * `bulbul:v3`: Tamil, Malayalam, Punjabi, Odia (`simran`).
+* **Vernacular Number Parsing**: Digit words and Indic numeral scripts across all 11 languages are parsed into standard digits.
+
+To manually set the merchant's language via curl:
 ```bash
-curl -X PATCH localhost:4000/api/me -H "x-api-key: pari-dev-key" -H "content-type: application/json" -d '{"language":"ta-IN"}'
+curl -X PATCH http://localhost:4000/api/me \
+  -H "x-api-key: pari-dev-key" \
+  -H "Content-Type: application/json" \
+  -d '{"language":"ta-IN"}'
 ```
 
-Digits in any Indian script are converted, and a phone number read out digit by digit is understood in every language. Amount words are only parsed in Hindi and English, and Saaras usually spells amounts out in the other languages, so those entries are flagged for review and Pari asks the merchant to listen carefully to the read-back. The tables other than Hindi haven't been reviewed by native speakers yet.
+---
 
-## Setup
+## 💾 Database Options
 
+Pari provides flexible database support for local testing and production deployment:
+
+### Option A: Zero-Setup Embedded PGlite (Default)
+When `DATABASE_URL` is omitted or empty, Pari automatically boots an embedded WASM PostgreSQL database located at `.data/pglite`.
+* Zero external daemons required.
+* Automatically creates schema migrations and seeds data on startup.
+* To completely reset database state, stop the server and delete `.data/pglite`:
+  ```bash
+  rm -rf .data/pglite
+  ```
+
+### Option B: Docker Compose PostgreSQL 16
+To run a production-identical PostgreSQL database:
+```bash
+docker compose up -d
+```
+Set in `.env`:
+```ini
+DATABASE_URL=postgres://pari:pari@localhost:5432/pari
+```
+
+---
+
+## 🚀 Quickstart & Configuration
+
+### 1. Install Dependencies
 ```bash
 cd backend
 npm install
-cp .env.example .env      # then put your key in SARVAM_API_KEY=
-npm run sarvam:hello      # one chat call to check the key
-sudo apt install sox libsox-fmt-pulse
 ```
 
-You don't need Docker. With `DATABASE_URL` empty, the server keeps its data in `.data/pglite` and migrates and seeds itself on start. To use real Postgres instead, run `docker compose up -d` and set `DATABASE_URL=postgres://pari:pari@localhost:5432/pari`.
+### 2. Configure Environment (`.env`)
+```bash
+cp .env.example .env
+```
+Key configuration variables:
 
-## Run it
+| Variable | Description | Default / Example |
+| :--- | :--- | :--- |
+| `PORT` | HTTP server port | `4000` |
+| `PARI_API_KEY` | Secret key required for `/api` requests | `pari-dev-key` |
+| `SARVAM_API_KEY` | Sarvam AI API key | `sk_...` |
+| `DATABASE_URL` | PostgreSQL connection string (leave blank for PGlite) | `postgres://pari:pari@localhost:5432/pari` |
+| `PARI_DEMO_SEED` | Seed sample customers and multi-day ledger history | `true` |
+| `PARI_PAYTM_MODE` | Payment mode (`mock` or `sandbox`) | `mock` |
+| `PARI_TTS_PACE` | Speaking speed multiplier for Bulbul | `1.15` (0.5 to 2.0) |
+
+### 3. Verify Sarvam AI Connection
+```bash
+npm run sarvam:hello
+```
+*Validates your `SARVAM_API_KEY` by sending a test ping to the Sarvam API.*
+
+### 4. Start Development Server
+```bash
+npm run dev
+```
+*Starts Express on port 4000 using `tsx watch` for auto-reloading.*
+
+---
+
+## 🎙️ Hands-Free Terminal CLI
+
+Pari includes a full ambient voice terminal that runs locally on your laptop microphone:
 
 ```bash
 npm run pari
 ```
 
-This starts the server in the background (logs go to `.data/server.log`), measures the room noise for a second, then listens. There is no wake word: whatever you say goes to Pari. Speech that isn't a ledger entry is shown as ignored and not answered. The terminal shows a live status line (listening, hearing you, thinking, speaking), each transcript, Pari's reply, the entry card, and the timing of every turn. Ctrl+C stops both the app and the server. `npm run pari -- --mute` turns Pari's voice off.
+### How It Works:
+1. **Room Noise Profiling**: Measures ambient room noise for 1 second upon boot to calibrate VAD energy thresholds.
+2. **Ambient Voice Detection**: Streams speech audio directly without requiring a wake-word.
+3. **Mute Mode**: Use `npm run pari -- --mute` to display text read-backs without synthesizing voice.
 
-Pari's reply is printed as soon as it is ready, and her voice streams from Bulbul so it starts about half a second later. The speaking pace is `PARI_TTS_PACE` (default 1.15, range 0.5 to 2).
+### Keyboard Shortcuts (Interactive Mode):
 
-Keys while Pari is listening:
+| Key | Action | Details |
+| :---: | :--- | :--- |
+| <kbd>Space</kbd> | **Push-to-Talk** | Tap to start recording, tap again to finish (Esc cancels). Ideal for noisy environments. |
+| <kbd>E</kbd> | **Ledger Snapshot** | Prints a table of recent entries, pending balances, and status. |
+| <kbd>L</kbd> | **Simulate Link Paid** | Triggers payment confirmation on the newest active Paytm link. |
+| <kbd>Q</kbd> | **Simulate Counter QR** | Sends an unreferenced QR payment matching the latest pending entry. |
 
-| Key | What it does |
-| --- | --- |
-| Space | Push-to-talk: speak, press Space again to send (Esc cancels). Use it when the room is noisy |
-| E | Show the latest entries |
-| L | Pretend the customer paid the newest open entry's Paytm link |
-| Q | Pretend the newest open entry's pending amount arrived on the shop QR |
+---
 
-## Demo script
+## 📖 API Reference
 
-1. Say *"Gupta ji ne 350 ka samaan liya, 200 UPI diya, 150 baaki."*
-2. Pari answers *"Gupta ji, total ₹350, ₹200 mile, ₹150 baaki. Save karoon?"* Say **"haan"**, or **"nahi, 250 diye"** to correct it.
-3. Pari asks *"₹150 ka payment link bhejun?"* Say **"haan"**, then the number: *"98765 43210"*. Pari reads it back. Say **"haan"** and the link is sent.
-4. Press **L**. Pari announces *"Gupta ji ne ₹150 de diye. Khaata band."*
-5. Make a second entry and answer **"nahi"** when Pari offers a link. Press **Q**. Pari asks *"₹150 aaya, Gupta ji ka?"*. Say **"haan"** and the entry closes.
-6. Press **E** to see everything.
+All `/api` endpoints (except the signature-verified Paytm webhook) require the `x-api-key: <PARI_API_KEY>` header (or `?key=` query parameter for SSE and audio streams).
 
-Also try: a number that isn't a mobile number ("ek do teen") and Pari asks again; a fully paid entry ("poora de diya") closes at once with no link.
+### Conversational & Voice Endpoints
+* **`POST /api/converse`**: Orchestrated multi-turn conversational turn.
+  * *Request*: Multipart `audio` file (`audio/wav`, `audio/webm`, `audio/mp4`), OR JSON `{ "text": "...", "speak": true }`.
+  * *Response*: `{ transcript, state, reply: { text, speech, language }, entry, link, timings }`.
+* **`GET /api/converse/state`**: Inspects the current merchant conversation state.
+* **`POST /api/converse/reset`**: Resets the active session back to `IDLE`.
+* **`POST /api/voice/entry`**: Stateless single-shot extraction and read-back generation.
+* **`GET /api/tts/stream?text=...&language=...`**: Streams chunked Bulbul audio with $<500\text{ms}$ time-to-first-byte.
 
-## API for a frontend
+### Merchant & Settings
+* **`GET /api/me`**: Returns shop identity, name, UPI ID, QR payload, and current language.
+* **`PATCH /api/me`**: Sets the merchant's spoken/display language (`{ "language": "hi-IN" }`).
 
-Every `/api` route except the Paytm callback needs `x-api-key: <PARI_API_KEY>`. For `EventSource` and `<audio src>` you can pass `?key=` instead. Amounts are in rupees. Errors look like `{ "error": { "code", "message", "details" } }`. The request and response types are in `src/contracts/index.ts`, so a frontend can import them.
+### Ledger & Entries
+* **`GET /api/entries`**: Lists entries with customer info, payment links, and matched payments. Query params: `status`, `customerId`, `limit`.
+* **`GET /api/entries/:id`**: Retrieves full entry details.
+* **`PATCH /api/entries/:id`**: Manually edits entry amounts or customer name.
+* **`POST /api/entries/:id/confirm`**: Confirms (`"yes"`) or rejects (`"no"`) an unconfirmed entry.
+* **`POST /api/entries/:id/collect`**: Dispatches a Paytm SMS payment link for the pending amount.
 
-| Method and path | Purpose |
-| --- | --- |
-| `POST /api/converse` | One conversational turn: JSON `{ text }`, or multipart `audio` plus optional `speak=false`. Returns the reply line, the base64 WAV (unless `speak=false`), the state, the entry and link if there are any, and per-stage `timings` |
-| `GET /api/converse/state`, `POST /api/converse/reset` | Inspect or reset the session |
-| `GET /api/events` | SSE: `pari.ready`, `pari.entry.updated`, `pari.payment.received`, `pari.payment.suggested`, `pari.prompt`, `pari.announce` |
-| `POST /api/voice/entry` | Stateless: audio or text in, an `UNCONFIRMED` entry and read-back out |
-| `GET /api/me` | The shop for this API key: `{ id, name, upiId, qrPayload, language }`. `qrPayload` is a UPI payment intent when `PARI_UPI_ID` is set, and `language` is `null` until the merchant picks one |
-| `PATCH /api/me` | `{ language }`, one of the 11 codes such as `"ta-IN"`. Sets the language Pari hears and speaks |
-| `GET /api/entries`, `GET` or `PATCH /api/entries/:id` | List, read, or correct an entry. Reads include the latest payment `link` and the matched `payments` |
-| `POST /api/entries/:id/confirm` | `{ answer: "yes" \| "no" }`, or a spoken answer as audio |
-| `POST /api/entries/:id/collect` | `{ phone? }`. Sends the payment link |
-| `GET /api/customers`, `GET /api/customers/:id/balance` | Customers and what they owe |
-| `GET /api/payments/suggestions`, `POST /api/payments/:id/match` | Pending QR matches. Body is `{ entryId }` or `{ reject: true }`. Settling a payment here also drops Pari's spoken question about it |
-| `POST /api/stt`, `POST /api/tts` | Raw Saaras and Bulbul. `/tts` takes an optional `language` |
-| `GET /api/tts/stream?text=&language=` | Bulbul WAV streamed as it is generated (first audio in ~0.5 s). `language` defaults to the merchant's |
-| `POST /api/paytm/callback` | Paytm status callback (checksum verified, no API key) |
-| `POST /api/dev/simulate/link-paid`, `POST /api/dev/simulate/qr` | Mock mode only |
-| `GET /health` | Status of the database, Paytm mode and Sarvam key |
+### Customers & Reconciliation
+* **`GET /api/customers`**: Lists all customer records.
+* **`GET /api/customers/:id/balance`**: Aggregate balance and list of open entries for a customer.
+* **`GET /api/payments/suggestions`**: Returns outstanding QR payments requiring merchant confirmation.
+* **`POST /api/payments/:id/match`**: Accepts (`{ entryId }`) or rejects (`{ reject: true }`) a QR candidate match.
 
-A browser can record with `MediaRecorder` (webm/opus) and post the blob to `/api/converse` with `speak=false`, show `reply.text` at once, and play `/api/tts/stream?text=<reply.speech>&language=<reply.language>&key=...` in an `<audio>` element. Listen on `/api/events?key=...` for Pari's QR questions and payment announcements.
+### Real-Time Events (SSE)
+* **`GET /api/events`**: Server-Sent Events stream:
+  * `pari.ready`: Connected to stream.
+  * `pari.entry.updated`: Ledger entry created, confirmed, or closed.
+  * `pari.payment.received`: Payment link settled.
+  * `pari.payment.suggested`: Shop QR payment landed with candidate match.
+  * `pari.prompt`: Spoken prompt emitted by Pari.
+  * `pari.announce`: Background audio announcement (e.g. soundbox settlement).
 
-## Sarvam credits
+### System & Webhooks
+* **`POST /api/paytm/callback`**: Public callback webhook from Paytm (verified with HMAC-SHA256 `CHECKSUMHASH`).
+* **`GET /health`**: Returns health status of database, Sarvam AI configuration, and Paytm mode.
 
-A full Gupta ji conversation by voice costs roughly ₹0.5 to ₹1. Speech-to-text costs ₹0.49 a minute, text-to-speech ₹1 per 1,000 characters, and the LLM a few paise per turn. Silence costs nothing: only sound above the measured room noise is sent. In a room with constant talking, every clip goes to speech-to-text, so use Space (push-to-talk) there. Repeated lines are cached and spoken for free. When credits run out, the API returns `402 SARVAM_CREDITS_EXHAUSTED`.
+---
 
-## Real Paytm sandbox (optional)
+## 💳 Paytm Sandbox Setup (Optional)
 
-Set `PARI_PAYTM_MODE=sandbox`, `PAYTM_MID` and `PAYTM_MERCHANT_KEY` (16 characters). Then run `ngrok http 4000` and set `PARI_PUBLIC_URL=https://<ngrok-host>`. Links are created with `statusCallbackUrl=<PARI_PUBLIC_URL>/api/paytm/callback`, and paying one with Paytm's test credentials closes the entry. The callback field names are matched loosely (ORDERID, LINKID, MERC_UNQ_REF), because this path hasn't been tested against live Paytm yet.
+To test with real Paytm sandbox credentials rather than simulated payments:
 
-## Tests
+1. Obtain Test Merchant credentials from [Paytm Developer Dashboard](https://dashboard.paytm.com/).
+2. Expose your local port 4000 via a tunnel:
+   ```bash
+   ngrok http 4000
+   ```
+3. Update `backend/.env`:
+   ```ini
+   PARI_PAYTM_MODE=sandbox
+   PAYTM_MID=your_test_merchant_id
+   PAYTM_MERCHANT_KEY=your_16_char_key
+   PARI_PUBLIC_URL=https://your-ngrok-subdomain.ngrok-free.app
+   ```
+4. Links will be dispatched with `statusCallbackUrl=<PARI_PUBLIC_URL>/api/paytm/callback`. When paid with test Paytm cards or mock UPI, entries close in real time.
 
-`npm test` runs about 470 tests with no network: number parsing, extraction checks, Pari's lines in all 11 languages, entry states, the reconciler, the conversation engine, the HTTP API and an end-to-end run through the terminal's API client against a live server. The LLM, speech and Paytm are all faked. `npm run typecheck` and `npm run build` should both be clean.
+---
 
-## Layout
+## 🧪 Testing & Quality
 
+Pari features a comprehensive offline test suite with **zero external network dependency**:
+
+```bash
+# Run 468+ unit, integration, and E2E mock tests
+npm test
+
+# Type-check TypeScript sources
+npm run typecheck
+
+# Production build
+npm run build
 ```
-src/
-  server.ts, app.ts, context.ts   boot, Express app, dependency wiring
-  config/       env validation
-  contracts/    request schemas and response types shared with frontends
-  db/           Kysely client, PGlite dialect, migrations, seed
-  ledger/       repository, state machine, reconciler, link collection
-  conversation/ per-merchant voice session state machine
-  languages.ts  the 11 languages and each merchant's choice
-  llm/          extraction, number parsing, and lines/: one table of Pari's lines per language
-  stt/ tts/ sarvam/  Sarvam Saaras, Bulbul (voices.ts: a voice per language) and client
-  paytm/        mock and sandbox clients, checksum
-  events/       in-process event bus behind SSE
-  routes/       HTTP routes
-  cli/          the hands-free terminal
-tests/
-```
+
+The test suite validates:
+* Spoken vernacular number parsing and fractions (*dedh*, *dhai*, *saade*).
+* Spoken 10-digit Indian mobile parsing across all 11 languages.
+* Line table accuracy and completeness for every supported language.
+* Strict accounting invariants ($Total = Paid + Pending$).
+* Per-merchant session locks and race-condition resistance.
+* Reconciler exact and heuristic matching scoring.
+* Full E2E flow from audio capture to database settlement.

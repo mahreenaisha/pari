@@ -125,6 +125,9 @@ When `EXPO_PUBLIC_DEMO_TOOLS=true` and the backend is running with `PARI_PAYTM_M
 * **Simulate Link Paid**: In the **Ledger** tab, **long-press** any row marked *"Link sent"*. The link is marked paid, the entry closes, and Pari speaks: *"Gupta ji ne ₹150 de diye. Khaata band."*
 * **Simulate Shop QR Payment**: In the **QR** tab, **long-press** the shop's QR code. A simulated payment arrives matching the latest open entry, and Pari asks aloud: *"₹150 aaya, Gupta ji ka?"*.
 
+> [!TIP]
+> For the complete judge demonstration dialogue script, see [docs/DEMO_GUIDE.md](../docs/DEMO_GUIDE.md).
+
 ---
 
 ## 🏗️ Project Architecture

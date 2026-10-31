@@ -29,6 +29,9 @@ The Pari backend is an Express 5 + TypeScript service that provides:
 5. **Real-time Event Streaming**: Server-Sent Events (SSE) broadcasting ledger updates, proactive prompts, and soundbox-style payment announcements.
 6. **Hands-Free Ambient CLI**: Terminal-based client with automated ambient noise calibration, Voice Activity Detection (VAD), and push-to-talk.
 
+> [!NOTE]
+> For complete end-to-end system architecture, state machine diagrams, and reconciliation algorithms, see [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).
+
 ---
 
 ## 🛠️ Stack

@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ Pari Backend API & Ambient CLI
+# Pari Backend API & Ambient CLI
 ### Core Financial Engine, Sarvam Indic Voice Pipeline & Paytm Settlement Server
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -9,17 +9,17 @@
 [![Kysely](https://img.shields.io/badge/ORM-Kysely-brightgreen?style=for-the-badge)](https://kysely.dev/)
 [![Sarvam AI](https://img.shields.io/badge/AI-Sarvam%20Cloud-6C47FF?style=for-the-badge)](https://sarvam.ai/)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20PGlite-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/electric-sql/pglite)
-[![Vitest](https://img.shields.io/badge/Tests-786%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Tests-796%20Passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 
 <br/>
 
-[Overview](#-overview) • [Stack](#-stack) • [11 Languages](#-11-indic-languages-support) • [Database Options](#-database-options) • [Quickstart](#-quickstart--configuration) • [CLI Client](#-hands-free-terminal-cli) • [API Reference](#-api-reference) • [Paytm Sandbox](#-paytm-sandbox-setup) • [Testing](#-testing--quality)
+[Overview](#overview) • [Stack](#stack) • [11 Languages](#11-indic-languages-support) • [Database Options](#database-options) • [Quickstart](#quickstart--configuration) • [CLI Client](#hands-free-terminal-cli) • [API Reference](#api-reference) • [Paytm Sandbox](#paytm-sandbox-setup-optional) • [Testing](#testing--quality)
 
 ---
 
 </div>
 
-## 📌 Overview
+## Overview
 
 The Pari backend is an Express 5 + TypeScript service that provides:
 1. **Conversational Engine**: Serialized, per-merchant state machine managing spoken interactions without race conditions. Supports udhar credit entries, cash repayments at the counter (*"Gupta ji ne 100 diye"*), balance queries (*"Gupta ji ka kitna baaki hai?"*), and customer disambiguation (*"Gupta didi"* vs *"Gupta ji"*).
@@ -29,9 +29,12 @@ The Pari backend is an Express 5 + TypeScript service that provides:
 5. **Real-time Event Streaming**: Server-Sent Events (SSE) broadcasting ledger updates, proactive prompts, and soundbox-style payment announcements.
 6. **Hands-Free Ambient CLI**: Terminal-based client with automated ambient noise calibration, Voice Activity Detection (VAD), and push-to-talk.
 
+> [!NOTE]
+> For complete end-to-end system architecture, state machine diagrams, and reconciliation algorithms, see [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).
+
 ---
 
-## 🛠️ Stack
+## Stack
 
 * **Runtime**: Node.js `20.12+` (v22+ recommended), ESM modules (`"type": "module"`).
 * **Framework**: Express `5.3+`, Helmet, CORS, Express-Rate-Limit.
@@ -44,7 +47,7 @@ The Pari backend is an Express 5 + TypeScript service that provides:
 
 ---
 
-## 🌐 11 Indic Languages Support
+## 11 Indic Languages Support
 
 Pari operates seamlessly across 11 Indian languages:
 `hi-IN` (Hindi), `en-IN` (English), `bn-IN` (Bengali), `ta-IN` (Tamil), `te-IN` (Telugu), `kn-IN` (Kannada), `ml-IN` (Malayalam), `mr-IN` (Marathi), `gu-IN` (Gujarati), `pa-IN` (Punjabi), and `od-IN` (Odia).
@@ -66,7 +69,7 @@ curl -X PATCH http://localhost:4000/api/me \
 
 ---
 
-## 💾 Database Options
+## Database Options
 
 Pari provides flexible database support for local testing and production deployment:
 
@@ -91,7 +94,7 @@ DATABASE_URL=postgres://pari:pari@localhost:5432/pari
 
 ---
 
-## 🚀 Quickstart & Configuration
+## Quickstart & Configuration
 
 ### 1. Install Dependencies
 ```bash
@@ -129,7 +132,7 @@ npm run dev
 
 ---
 
-## 🎙️ Hands-Free Terminal CLI
+## Hands-Free Terminal CLI
 
 Pari includes a full ambient voice terminal that runs locally on your laptop microphone:
 
@@ -153,7 +156,7 @@ npm run pari
 
 ---
 
-## 📖 API Reference
+## API Reference
 
 All `/api` endpoints (except the signature-verified Paytm webhook) require the `x-api-key: <PARI_API_KEY>` header (or `?key=` query parameter for SSE and audio streams).
 
@@ -199,7 +202,7 @@ All `/api` endpoints (except the signature-verified Paytm webhook) require the `
 
 ---
 
-## 💳 Paytm Sandbox Setup (Optional)
+## Paytm Sandbox Setup (Optional)
 
 To test with real Paytm sandbox credentials rather than simulated payments:
 
@@ -219,12 +222,12 @@ To test with real Paytm sandbox credentials rather than simulated payments:
 
 ---
 
-## 🧪 Testing & Quality
+## Testing & Quality
 
 Pari features a comprehensive offline test suite with **zero external network dependency**:
 
 ```bash
-# Run 786+ unit, integration, and E2E mock tests
+# Run 796+ unit, integration, and E2E mock tests
 npm test
 
 # Type-check TypeScript sources

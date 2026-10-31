@@ -251,14 +251,15 @@ export class ConversationEngine {
   private async onCollectChoice(session: Session, text: string, answer: YesNo): Promise<Step> {
     const say = linesFor(session.language);
     const entry = await getEntry(this.deps.db, session.merchantId, session.entryId!);
+    // A number comes first: the Bengali নয় is both "nine" and "not".
     const spokenPhone = parseIndianMobile(text);
-    if (answer === "no") {
-      this.toIdle(session);
-      return { state: "IDLE", reply: say.collectDeclined(), entry: toEntryDto(entry) };
-    }
     if (spokenPhone) {
       session.phone = spokenPhone;
       return { state: "AWAITING_PHONE_CONFIRM", reply: say.phoneReadback(spokenPhone) };
+    }
+    if (answer === "no") {
+      this.toIdle(session);
+      return { state: "IDLE", reply: say.collectDeclined(), entry: toEntryDto(entry) };
     }
     if (answer === "yes") {
       if (entry.customer_phone) return this.sendLink(session, entry.customer_phone);
